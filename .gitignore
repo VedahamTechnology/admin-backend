@@ -1,0 +1,46 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Testing
+.nyc_output/
+
+# Build
+dist/
+build/
