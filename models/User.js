@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function() {
   if (!this.userId) {
     const count = await mongoose.model('User').countDocuments({ role: this.role });
     const prefix = this.role === 'customer' ? 'UC'
@@ -44,22 +44,17 @@ userSchema.pre('save', async function(next) {
                  : 'UA';
     this.userId = `${prefix}-${String(count + 1).padStart(5, '0')}`;
   }
-  next();
-});
 
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  if (this.isModified('password')) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
 });
 
 userSchema.methods.comparePassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
 userSchema.index({ role: 1 });
 
 module.exports = mongoose.model('User', userSchema);
