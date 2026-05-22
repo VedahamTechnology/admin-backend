@@ -57,12 +57,11 @@ const paymentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-paymentSchema.pre('save', async function(next) {
+paymentSchema.pre('save', async function() {
   if (!this.paymentId) {
     const count = await mongoose.model('Payment').countDocuments();
     this.paymentId = `PAY-${String(count + 1).padStart(6, '0')}`;
   }
-  next();
 });
 
 paymentSchema.index({ booking: 1 });

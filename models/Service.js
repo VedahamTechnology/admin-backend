@@ -16,33 +16,52 @@ const serviceSchema = new mongoose.Schema({
     ref:  'Brand',
   },
 
+  // Pricing Details
   basePrice:         { type: Number, required: true, min: 0 },
-  discountedPrice:   { type: Number, default: 0 },
-  estimatedDuration: { type: Number, required: true },
+  discountedPrice:   { type: Number, default: 0, min: 0 },
+  minPrice:          { type: Number, default: 0 }, // Minimum price
+  priceUnit:         { type: String, enum: ['per_service', 'per_hour', 'per_day', 'per_item'], default: 'per_service' },
+  taxPercentage:     { type: Number, default: 0, min: 0, max: 100 }, // For GST calculations
+  
+  estimatedDuration: { type: Number, required: true }, // in minutes
+  durationUnit:      { type: String, enum: ['minutes', 'hours', 'days'], default: 'minutes' },
 
+  // Media
   image:    { type: String },
   images:   [{ type: String }],
+  
+  // Service Details
   features: [{ type: String }],
   includes: [{ type: String }],
   excludes: [{ type: String }],
 
+  // Vendor Information
   vendors: [{
     vendorId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     vendorPrice: { type: Number },
     isAvailable: { type: Boolean, default: true },
   }],
 
+  // Ratings
   ratings: {
     average: { type: Number, default: 0, min: 0, max: 5 },
     count:   { type: Number, default: 0 },
   },
 
+  // Availability
+  availability: {
+    availableFrom: { type: String }, // e.g., "8:00 AM"
+    availableTo:   { type: String }, // e.g., "10:00 PM"
+    daysOfWeek:    [{ type: Number, min: 0, max: 6 }], // 0 = Sunday, 6 = Saturday
+  },
+
+  // Status
   isActive:    { type: Boolean, default: true },
   displayOrder:{ type: Number, default: 0 },
 
 }, { timestamps: true });
 
-serviceSchema.pre('save', async function(next) {
+serviceSchema.pre('save', async function() {
   if (!this.serviceId) {
     const count = await mongoose.model('Service').countDocuments();
     this.serviceId = `SRV-${String(count + 1).padStart(4, '0')}`;
@@ -50,11 +69,12 @@ serviceSchema.pre('save', async function(next) {
   if (!this.slug) {
     this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
   }
-  next();
 });
 
 serviceSchema.index({ category: 1, isActive: 1 });
 serviceSchema.index({ brand: 1 });
-serviceSchema.index({ slug: 1 });
+// Note: slug index is already created by unique: true constraint
+serviceSchema.index({ 'ratings.average': -1 }); // For sorting by ratings
+serviceSchema.index({ basePrice: 1 }); // For price range filtering
 
 module.exports = mongoose.model('Service', serviceSchema);

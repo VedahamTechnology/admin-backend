@@ -89,13 +89,12 @@ const bookingSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-bookingSchema.pre('save', async function(next) {
+bookingSchema.pre('save', async function() {
   if (!this.bookingId) {
     const date  = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const count = await mongoose.model('Booking').countDocuments();
     this.bookingId = `BK-${date}-${String(count + 1).padStart(5, '0')}`;
   }
-  next();
 });
 
 bookingSchema.index({ customer: 1, createdAt: -1 });

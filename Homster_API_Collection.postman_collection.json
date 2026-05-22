@@ -1,0 +1,1558 @@
+{
+  "info": {
+    "_postman_id": "homster-api-collection",
+    "name": "Homster API - Complete Routes",
+    "description": "Complete API documentation for Homster backend with all routes, request bodies, and expected responses",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Check Server Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is successful', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication Routes",
+      "item": [
+        {
+          "name": "Register as Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"9876543210\",\n  \"password\": \"SecurePassword123\",\n  \"gender\": \"male\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/customer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register", "customer"]
+            }
+          }
+        },
+        {
+          "name": "Register as Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.vendor@example.com\",\n  \"phone\": \"9876543211\",\n  \"password\": \"SecurePassword123\",\n  \"gender\": \"female\",\n  \"businessName\": \"Jane's Services\",\n  \"experience\": 5,\n  \"skills\": [\"plumbing\", \"electrical\"],\n  \"serviceAreas\": [\"area1\", \"area2\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/vendor",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register", "vendor"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('token', jsonData.accessToken);",
+                  "    pm.test('Token saved to environment', function () {",
+                  "        pm.expect(pm.environment.get('token')).to.not.be.undefined;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes - Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users?page=1&limit=10&isActive=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/USER_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "USER_ID"]
+            }
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/search?q=john&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "john"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Block User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/USER_ID/block",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "USER_ID", "block"]
+            }
+          }
+        },
+        {
+          "name": "Unblock User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/USER_ID/unblock",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "USER_ID", "unblock"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/USER_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "USER_ID"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes - Vendors",
+      "item": [
+        {
+          "name": "Get All Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors?page=1&limit=10&verificationStatus=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "verificationStatus",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID"]
+            }
+          }
+        },
+        {
+          "name": "Search Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/search?q=jane&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "jane"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approvalNotes\": \"Documents verified successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Business documents are incomplete\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID/reject",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Block Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID/block",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID", "block"]
+            }
+          }
+        },
+        {
+          "name": "Unblock Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID/unblock",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID", "unblock"]
+            }
+          }
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/VENDOR_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "VENDOR_ID"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendors by Distance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/vendors/nearby?latitude=40.7128&longitude=-74.0060&maxDistance=5000&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "vendors", "nearby"],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "longitude",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "maxDistance",
+                  "value": "5000"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes - Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Plumbing\",\n  \"description\": \"Plumbing services including repairs and installations\",\n  \"image\": \"https://example.com/plumbing.jpg\",\n  \"icon\": \"plumbing-icon-url\",\n  \"displayOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories?isActive=true&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories"],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories/CATEGORY_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories", "CATEGORY_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Plumbing & Repairs\",\n  \"description\": \"Professional plumbing services\",\n  \"displayOrder\": 2,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories/CATEGORY_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories", "CATEGORY_ID"]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories/CATEGORY_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories", "CATEGORY_ID"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Update Category Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"CATEGORY_ID_1\", \"CATEGORY_ID_2\"],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/categories/bulk/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "categories", "bulk", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Routes - Services",
+      "item": [
+        {
+          "name": "Create Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pipe Repair\",\n  \"description\": \"Emergency pipe repair service\",\n  \"categoryId\": \"CATEGORY_ID\",\n  \"basePrice\": 500,\n  \"estimatedDuration\": 60,\n  \"vendors\": [\"VENDOR_ID_1\", \"VENDOR_ID_2\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/services",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services"]
+            }
+          }
+        },
+        {
+          "name": "Get All Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/services?page=1&limit=10&isActive=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Service by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "SERVICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Get Services by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/category/CATEGORY_ID?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "category", "CATEGORY_ID"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Emergency Pipe Repair\",\n  \"basePrice\": 600,\n  \"estimatedDuration\": 45,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "SERVICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Delete Service",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "SERVICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Remove Vendor from Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"VENDOR_ID\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/SERVICE_ID/remove-vendor",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "SERVICE_ID", "remove-vendor"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Update Service Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"SERVICE_ID_1\", \"SERVICE_ID_2\"],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/services/bulk/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "services", "bulk", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor Routes - Profile",
+      "item": [
+        {
+          "name": "Get Vendor Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Vendor Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"9876543211\",\n  \"gender\": \"female\",\n  \"businessName\": \"Jane's Premium Services\",\n  \"ownerName\": \"Jane Smith\",\n  \"experience\": 6,\n  \"skills\": [\"plumbing\", \"electrical\", \"carpentry\"],\n  \"address\": \"456 Oak Ave\",\n  \"city\": \"Brooklyn\",\n  \"pincode\": \"11201\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Current Location",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"address\": \"789 Broadway\",\n  \"city\": \"New York\",\n  \"pincode\": \"10003\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/location",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "location"]
+            }
+          }
+        },
+        {
+          "name": "Add Service Categories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryIds\": [\"CATEGORY_ID_1\", \"CATEGORY_ID_2\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isAvailable\": true,\n  \"availableHours\": {\n    \"Monday\": { \"start\": \"09:00\", \"end\": \"18:00\" },\n    \"Tuesday\": { \"start\": \"09:00\", \"end\": \"18:00\" },\n    \"Wednesday\": { \"start\": \"09:00\", \"end\": \"18:00\" },\n    \"Thursday\": { \"start\": \"09:00\", \"end\": \"18:00\" },\n    \"Friday\": { \"start\": \"09:00\", \"end\": \"18:00\" },\n    \"Saturday\": { \"start\": \"10:00\", \"end\": \"16:00\" },\n    \"Sunday\": null\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "availability"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Available Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/available?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "available"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Service Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get My Selected Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/my-services?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "my-services"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Select Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"SERVICE_ID\",\n  \"customPrice\": 600\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/select",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "select"]
+            }
+          }
+        },
+        {
+          "name": "Update Service Pricing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"SERVICE_ID\",\n  \"customPrice\": 700\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/pricing",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "pricing"]
+            }
+          }
+        },
+        {
+          "name": "Remove Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"SERVICE_ID\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/profile/services/remove",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "profile", "services", "remove"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor Routes - Services",
+      "item": [
+        {
+          "name": "Create Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custom Plumbing Service\",\n  \"description\": \"Customized plumbing services\",\n  \"category\": \"CATEGORY_ID\",\n  \"basePrice\": 800,\n  \"estimatedDuration\": 90,\n  \"images\": [\"https://example.com/image1.jpg\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services"]
+            }
+          }
+        },
+        {
+          "name": "Get My Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services/search?q=plumbing&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "plumbing"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Service by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services", "SERVICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Service",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Premium Plumbing Service\",\n  \"basePrice\": 900,\n  \"estimatedDuration\": 75,\n  \"description\": \"Premium plumbing services with warranty\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services", "SERVICE_ID"]
+            }
+          }
+        },
+        {
+          "name": "Update Service Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isAvailable\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services/SERVICE_ID/availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services", "SERVICE_ID", "availability"]
+            }
+          }
+        },
+        {
+          "name": "Delete Service",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "services", "SERVICE_ID"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor Routes - Bookings",
+      "item": [
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings?status=pending&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/BOOKING_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "BOOKING_ID"]
+            }
+          }
+        },
+        {
+          "name": "Search Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/search?q=john&status=pending&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "john"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accept Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estimatedCompletionTime\": \"2026-05-25T11:00:00.000Z\",\n  \"notes\": \"Will arrive in 30 minutes\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/BOOKING_ID/accept",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "BOOKING_ID", "accept"]
+            }
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Currently not available for this date\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/BOOKING_ID/reject",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "BOOKING_ID", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Complete Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completionNotes\": \"Service completed successfully\",\n  \"finalAmount\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/BOOKING_ID/complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "BOOKING_ID", "complete"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancellationReason\": \"Emergency came up\",\n  \"refundAmount\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/BOOKING_ID/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "BOOKING_ID", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vendor/bookings/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vendor", "bookings", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_access_token_here",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "your_admin_token_here",
+      "type": "string"
+    },
+    {
+      "key": "vendor_token",
+      "value": "your_vendor_token_here",
+      "type": "string"
+    }
+  ]
+}

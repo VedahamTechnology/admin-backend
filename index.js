@@ -8,6 +8,11 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes   = require('./routes/authRoutes');
 const userAdminRoutes = require('./routes/admin/userRoutes');
 const vendorAdminRoutes = require('./routes/admin/vendorRoutes');
+const categoryAdminRoutes = require('./routes/admin/categoryRoutes');
+const serviceAdminRoutes = require('./routes/admin/serviceRoutes');
+const vendorServiceRoutes = require('./routes/vendor/serviceRoutes');
+const vendorBookingRoutes = require('./routes/vendor/bookingRoutes');
+const vendorProfileRoutes = require('./routes/vendor/profileRoutes');
 dotenv.config();
 connectDB();
 
@@ -26,6 +31,11 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/users', userAdminRoutes);
 app.use('/api/admin/vendors', vendorAdminRoutes);
+app.use('/api/admin/categories', categoryAdminRoutes);
+app.use('/api/admin/services', serviceAdminRoutes);
+app.use('/api/vendor/services', vendorServiceRoutes);
+app.use('/api/vendor/bookings', vendorBookingRoutes);
+app.use('/api/vendor/profile', vendorProfileRoutes);
 
 app.use(errorHandler);
 

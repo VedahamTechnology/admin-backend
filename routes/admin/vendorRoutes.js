@@ -18,10 +18,10 @@ const { protect, authorize } = require('../../middleware/auth');
 router.use(protect);
 router.use(authorize('admin'));
 
-router.get   ('/search',      searchVendors);
-router.get   ('/:id',         getVendorById);
-router.get   ('/nearby',      getVendorsByDistance);
 router.get   ('/',            getAllVendors);
+router.get   ('/search',      searchVendors);
+router.get   ('/nearby',      getVendorsByDistance);
+router.get   ('/:id',         getVendorById);
 router.put   ('/:id/approve', approveVendor);
 router.put   ('/:id/reject',  rejectVendor);
 router.put   ('/:id/block',   blockVendor);

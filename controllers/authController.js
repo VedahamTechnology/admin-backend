@@ -304,3 +304,31 @@ exports.refreshAccessToken = async (req, res) => {
     });
   }
 };
+
+exports.logout = async (req, res) => {
+  try {
+    // Clear refresh token from database if user is authenticated
+    if (req.user) {
+      const user = await User.findById(req.user.id);
+      if (user) {
+        user.refreshToken = null;
+        await user.save();
+      }
+    }
+
+    // Clear the refresh token cookie
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

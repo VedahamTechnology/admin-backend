@@ -15,8 +15,8 @@ const { protect, authorize } = require('../../middleware/auth');
 router.use(protect);
 router.use(authorize('admin'));
 
-router.get   ('/search',      searchUsers);
 router.get   ('/',            getAllUsers);
+router.get   ('/search',      searchUsers);
 router.get   ('/:id',         getUserById);
 router.put   ('/:id/block',   blockUser);
 router.put   ('/:id/unblock', unblockUser);
