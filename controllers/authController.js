@@ -1,9 +1,34 @@
 const User = require('../models/User');
-const jwt  = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d',
+const generateAccessToken = (id, role) => {
+  return jwt.sign(
+    { id, role },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRE || '15m',
+    }
+  );
+};
+
+const generateRefreshToken = (id) => {
+  return jwt.sign(
+    { id },
+    process.env.REFRESH_SECRET,
+    {
+      expiresIn: process.env.REFRESH_EXPIRE || '7d',
+    }
+  );
+};
+
+const setRefreshTokenCookie = (res, refreshToken) => {
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
   });
 };
 
@@ -36,12 +61,21 @@ exports.registerCustomer = async (req, res) => {
       role: 'customer',
     });
 
-    const token = generateToken(customer._id, customer.role);
+    const accessToken = generateAccessToken(customer._id, customer.role);
+    const refreshToken = generateRefreshToken(customer._id);
+
+    // Hash and store refresh token
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    customer.refreshToken = hashedRefreshToken;
+    await customer.save();
+
+    // Set HttpOnly cookie
+    setRefreshTokenCookie(res, refreshToken);
 
     res.status(201).json({
       success: true,
       message: 'Customer registered successfully',
-      token,
+      accessToken,
       user: {
         id:        customer._id,
         userId:    customer.userId,
@@ -93,12 +127,21 @@ exports.registerVendor = async (req, res) => {
       },
     });
 
-    const token = generateToken(vendor._id, vendor.role);
+    const accessToken = generateAccessToken(vendor._id, vendor.role);
+    const refreshToken = generateRefreshToken(vendor._id);
+
+    // Hash and store refresh token
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    vendor.refreshToken = hashedRefreshToken;
+    await vendor.save();
+
+    // Set HttpOnly cookie
+    setRefreshTokenCookie(res, refreshToken);
 
     res.status(201).json({
       success: true,
       message: 'Vendor registered successfully. Waiting for admin approval.',
-      token,
+      accessToken,
       user: {
         id:                 vendor._id,
         userId:             vendor.userId,
@@ -164,12 +207,21 @@ exports.login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user._id, user.role);
+    const accessToken = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
+
+    // Hash and store refresh token
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    user.refreshToken = hashedRefreshToken;
+    await user.save();
+
+    // Set HttpOnly cookie
+    setRefreshTokenCookie(res, refreshToken);
 
     res.status(200).json({
       success: true,
       message: `${user.role.charAt(0).toUpperCase() + user.role.slice(1)} logged in successfully`,
-      token,
+      accessToken,
       user: {
         id:        user._id,
         userId:    user.userId,
@@ -194,5 +246,61 @@ exports.getMe = async (req, res) => {
     res.status(200).json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refresh token is required',
+      });
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Compare provided refresh token with hashed token in DB
+    const isValidRefreshToken = await bcrypt.compare(refreshToken, user.refreshToken);
+    
+    if (!isValidRefreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token',
+      });
+    }
+
+    // Generate new tokens
+    const newAccessToken = generateAccessToken(user._id, user.role);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    // Hash and rotate refresh token in DB
+    const hashedNewRefreshToken = await bcrypt.hash(newRefreshToken, 10);
+    user.refreshToken = hashedNewRefreshToken;
+    await user.save();
+
+    // Set new HttpOnly cookie
+    setRefreshTokenCookie(res, newRefreshToken);
+
+    res.status(200).json({
+      success: true,
+      message: 'Access token refreshed successfully',
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: 'Token refresh failed: ' + error.message,
+    });
   }
 };
