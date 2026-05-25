@@ -10,6 +10,7 @@ const {
   cancelBooking,
   getBookingStats,
   searchBookings,
+  submitProofOfWork,
 } = require('../../controllers/vendor/bookingController');
 
 const { protect, authorize, verifyVendorApproval } = require('../../middleware/auth');
@@ -27,6 +28,7 @@ router.get('/:id', getBookingById);
 router.put('/:id/accept', acceptBooking);
 router.put('/:id/reject', rejectBooking);
 router.put('/:id/complete', completeBooking);
+router.post('/:id/proof-of-work', submitProofOfWork);
 router.put('/:id/cancel', cancelBooking);
 
 module.exports = router;

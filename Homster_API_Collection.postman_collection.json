@@ -1531,6 +1531,966 @@
           }
         }
       ]
+    },
+    {
+      "name": "User - Services",
+      "item": [
+        {
+          "name": "Get All Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains services array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all available services with pagination"
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains categories array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.environment.set('categoryId', jsonData.data[0]._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services", "categories"]
+            },
+            "description": "Get all service categories"
+          }
+        },
+        {
+          "name": "Get Services by Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains services array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services/category/CATEGORY_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services", "category", "CATEGORY_ID"]
+            },
+            "description": "Get services filtered by category. Replace CATEGORY_ID with actual category ID"
+          }
+        },
+        {
+          "name": "Get Service Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Service details contain required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('_id');",
+                  "    pm.expect(jsonData.data).to.have.property('name');",
+                  "    pm.expect(jsonData.data).to.have.property('description');",
+                  "    pm.expect(jsonData.data).to.have.property('basePrice');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services/SERVICE_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services", "SERVICE_ID"]
+            },
+            "description": "Get detailed information about a specific service"
+          }
+        },
+        {
+          "name": "Search Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains search results', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services/search?query=plumbing&location=bangalore&radius=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "plumbing"
+                },
+                {
+                  "key": "location",
+                  "value": "bangalore"
+                },
+                {
+                  "key": "radius",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Search services by query, location, and radius"
+          }
+        },
+        {
+          "name": "Get Top Rated Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains top rated services', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/user/services/top-rated?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "services", "top-rated"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Get top-rated services"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User - Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Booking created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.have.property('_id');",
+                  "    pm.expect(jsonData.data).to.have.property('bookingId');",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('bookingId', jsonData.data._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"SERVICE_ID\",\n  \"vendorId\": \"VENDOR_ID\",\n  \"bookingDate\": \"2026-06-15\",\n  \"timeSlot\": {\n    \"startTime\": \"10:00\",\n    \"endTime\": \"12:00\"\n  },\n  \"serviceAddress\": {\n    \"street\": \"123 Main Street\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"pincode\": \"560001\",\n    \"instructions\": \"Ring the bell twice\"\n  },\n  \"paymentMethod\": \"credit_card\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings"]
+            },
+            "description": "Create a new booking for a service. Replace SERVICE_ID and VENDOR_ID with actual IDs"
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains bookings array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings?page=1&limit=10&status=confirmed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "confirmed"
+                }
+              ]
+            },
+            "description": "Get all bookings for the logged-in user with optional filtering by status"
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Booking details contain required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('_id');",
+                  "    pm.expect(jsonData.data).to.have.property('bookingId');",
+                  "    pm.expect(jsonData.data).to.have.property('status');",
+                  "    pm.expect(jsonData.data).to.have.property('pricing');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID"]
+            },
+            "description": "Get detailed information about a specific booking"
+          }
+        },
+        {
+          "name": "Search Bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Search results contain bookings array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/search?query=electrical&status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "electrical"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "Search bookings by service name or booking ID and filter by status"
+          }
+        },
+        {
+          "name": "Get Booking Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Stats contain required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('totalBookings');",
+                  "    pm.expect(jsonData.data).to.have.property('statusBreakdown');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "stats"]
+            },
+            "description": "Get booking statistics for the logged-in user"
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Booking cancelled successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.status).to.equal('cancelled');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Emergency came up\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID", "cancel"]
+            },
+            "description": "Cancel a booking. Can only cancel pending or confirmed bookings"
+          }
+        },
+        {
+          "name": "Reschedule Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Booking rescheduled successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newDate\": \"2026-06-20\",\n  \"newTimeSlot\": {\n    \"startTime\": \"14:00\",\n    \"endTime\": \"16:00\"\n  },\n  \"reason\": \"Work schedule conflict\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID/reschedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID", "reschedule"]
+            },
+            "description": "Reschedule an existing booking to a new date and time"
+          }
+        },
+        {
+          "name": "Verify Start OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('OTP verified successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID/verify-start-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID", "verify-start-otp"]
+            },
+            "description": "Verify vendor arrival using OTP provided by vendor"
+          }
+        },
+        {
+          "name": "Verify End OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('End OTP verified successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"654321\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID/verify-end-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID", "verify-end-otp"]
+            },
+            "description": "Verify service completion using OTP provided by vendor"
+          }
+        },
+        {
+          "name": "Get Reschedule History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains reschedule history', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/bookings/BOOKING_ID/reschedule-history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "bookings", "BOOKING_ID", "reschedule-history"]
+            },
+            "description": "Get complete reschedule history for a booking"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains notifications array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "pm.test('Response contains pagination info', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.pagination).to.have.property('currentPage');",
+                  "    pm.expect(jsonData.pagination).to.have.property('totalPages');",
+                  "    pm.expect(jsonData.pagination).to.have.property('totalItems');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Retrieve paginated notifications for the logged-in user"
+          }
+        },
+        {
+          "name": "Get Notifications by Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('All notifications have correct type', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var type = pm.request.url.path[3];",
+                  "    jsonData.data.forEach(function(notification) {",
+                  "        pm.expect(notification.type).to.equal(type);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/type/booking_created?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "type", "booking_created"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get notifications filtered by type. Valid types: booking_created, booking_confirmed, booking_cancelled, vendor_arrived, service_completed, payment_received, review_posted, booking_rescheduled, otp_sent"
+          }
+        },
+        {
+          "name": "Get Unread Notifications Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains unreadCount', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('unreadCount');",
+                  "    pm.expect(jsonData.data).to.have.property('notifications');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/unread/count",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "unread", "count"]
+            },
+            "description": "Get count of unread notifications and latest 5 unread notifications"
+          }
+        },
+        {
+          "name": "Get Notification Preferences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains notification preferences', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('inApp');",
+                  "    pm.expect(jsonData.data).to.have.property('push');",
+                  "    pm.expect(jsonData.data).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "preferences"]
+            },
+            "description": "Get user's notification preferences (email, push, SMS settings)"
+          }
+        },
+        {
+          "name": "Mark Single Notification as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Notification marked as read', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.isRead).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/NOTIFICATION_ID/read",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "NOTIFICATION_ID", "read"]
+            },
+            "description": "Mark a single notification as read. Replace NOTIFICATION_ID with the actual notification ID"
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Success message received', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/read/all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "read", "all"]
+            },
+            "description": "Mark all notifications as read for the authenticated user"
+          }
+        },
+        {
+          "name": "Delete Single Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Notification deleted successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.message).to.include('deleted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/NOTIFICATION_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "NOTIFICATION_ID"]
+            },
+            "description": "Delete a single notification. Replace NOTIFICATION_ID with the actual notification ID"
+          }
+        },
+        {
+          "name": "Clear All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('All notifications cleared', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.message).to.include('cleared');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications"]
+            },
+            "description": "Clear all notifications for the authenticated user"
+          }
+        }
+      ]
     }
   ],
   "variable": [

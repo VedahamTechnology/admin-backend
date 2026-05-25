@@ -333,3 +333,74 @@ exports.searchBookings = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Submit proof of work (photos and notes from vendor after completion)
+ */
+exports.submitProofOfWork = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { beforeImages, afterImages, vendorNotes } = req.body;
+
+    if (!beforeImages || !afterImages || beforeImages.length === 0 || afterImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide before and after images',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if vendor is making this request
+    if (booking.vendor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the assigned vendor can submit proof of work',
+      });
+    }
+
+    // Check if booking is completed
+    if (booking.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Can only submit proof of work for completed bookings',
+      });
+    }
+
+    // Update proof of work
+    booking.proofOfWork = {
+      beforeImages,
+      afterImages,
+      vendorNotes: vendorNotes || '',
+      completedAt: new Date(),
+    };
+
+    await booking.save();
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName email' },
+      { path: 'vendor', select: 'firstName lastName email' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Proof of work submitted successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Submit proof of work error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error submitting proof of work',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};

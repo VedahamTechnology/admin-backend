@@ -9,11 +9,17 @@ const {
   deleteService,
   updateServiceAvailability,
   searchServices,
+  getCategories,
+  getServicesByCategory,
 } = require('../../controllers/vendor/serviceController');
 
 const { protect, authorize, verifyVendorApproval } = require('../../middleware/auth');
 
-// All routes require vendor authentication and approval
+// Public browsing routes - no authentication required
+router.get('/browse/categories', getCategories);
+router.get('/browse/category/:categoryId', getServicesByCategory);
+
+// All routes below require vendor authentication and approval
 router.use(protect);
 router.use(authorize('vendor'));
 router.use(verifyVendorApproval);

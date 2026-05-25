@@ -1,0 +1,738 @@
+const Booking = require('../../models/Booking');
+const Service = require('../../models/Service');
+const User = require('../../models/User');
+const Category = require('../../models/Category');
+const NotificationService = require('../../utils/notificationService');
+
+/**
+ * Create a new booking
+ */
+exports.createBooking = async (req, res) => {
+  try {
+    const {
+      serviceId,
+      vendorId,
+      bookingDate,
+      timeSlot,
+      serviceAddress,
+      paymentMethod,
+    } = req.body;
+
+    // Validate required fields
+    if (!serviceId || !vendorId || !bookingDate || !timeSlot || !serviceAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: serviceId, vendorId, bookingDate, timeSlot, serviceAddress',
+      });
+    }
+
+    // Validate service exists
+    const service = await Service.findById(serviceId);
+    if (!service || !service.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found or is not available',
+      });
+    }
+
+    // Validate vendor exists and is approved
+    const vendor = await User.findById(vendorId);
+    if (!vendor || vendor.role !== 'vendor' || !vendor.isApproved || vendor.isBanned) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found or is not available',
+      });
+    }
+
+    // Check if vendor offers this service
+    const vendorService = service.vendors.find(v => v.vendorId.toString() === vendorId);
+    if (!vendorService || !vendorService.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: 'This vendor does not offer this service or is not available',
+      });
+    }
+
+    // Validate booking date is in future
+    const bookingDateTime = new Date(bookingDate);
+    if (bookingDateTime < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking date must be in the future',
+      });
+    }
+
+    // Validate timeSlot format
+    if (!timeSlot.startTime || !timeSlot.endTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid startTime and endTime',
+      });
+    }
+
+    // Calculate pricing with proper breakdown
+    const basePrice = vendorService.vendorPrice || service.basePrice;
+    const platformFee = (basePrice * 0.15) || 0;  // 15% platform fee (configurable)
+    const tax = (basePrice * (service.taxPercentage || 0)) / 100;
+    const discount = 0;  // Can be applied via promo codes
+    const totalAmount = basePrice + platformFee + tax - discount;
+    const vendorPayout = basePrice - platformFee;
+
+    // Extract request body
+    const { customerNotes } = req.body;
+
+    // Create booking with comprehensive pricing snapshot
+    const booking = await Booking.create({
+      customer: req.user._id,
+      vendor: vendorId,
+      service: serviceId,
+      category: service.category,
+      bookingDate: bookingDateTime,
+      timeSlot,
+      serviceAddress: {
+        label: serviceAddress.label || 'Home',
+        street: serviceAddress.street,
+        city: serviceAddress.city,
+        state: serviceAddress.state,
+        pincode: serviceAddress.pincode,
+        location: serviceAddress.location || { type: 'Point', coordinates: [0, 0] },
+        instructions: serviceAddress.instructions,
+      },
+      pricing: {
+        basePrice,
+        platformFee,
+        tax,
+        discount,
+        totalAmount,
+        vendorPayout,
+        serviceSnapshot: {
+          serviceName: service.name,
+          serviceDescription: service.description,
+          serviceImage: service.image,
+        },
+      },
+      payment: {
+        method: paymentMethod || 'cash',
+        status: 'pending',
+      },
+      customerNotes,
+    });
+
+    // Populate booking details
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName email phone profileImage' },
+      { path: 'vendor', select: 'firstName lastName email phone businessName profileImage' },
+      { path: 'service', select: 'name description image basePrice estimatedDuration' },
+      { path: 'category', select: 'name' },
+    ]);
+
+    // Send notifications to vendor and customer
+    try {
+      // Get Socket.IO instance from request if available (passed via middleware)
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingCreated(booking._id, booking, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+      // Don't fail the booking creation if notification fails
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Booking created successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Create booking error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating booking',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get user's bookings
+ */
+exports.getMyBookings = async (req, res) => {
+  try {
+    const {
+      status,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = req.query;
+
+    // Build filter
+    const filter = { customer: req.user._id };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    // Pagination
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Sort
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Fetch bookings
+    const bookings = await Booking.find(filter)
+      .populate('vendor', 'firstName lastName email phone businessName profileImage rating')
+      .populate('service', 'name description image basePrice estimatedDuration')
+      .populate('category', 'name')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    // Get total count
+    const total = await Booking.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Bookings retrieved successfully',
+      data: bookings,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    console.error('Get my bookings error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching bookings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get booking details
+ */
+exports.getBookingDetails = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId)
+      .populate('customer', 'firstName lastName email phone profileImage')
+      .populate('vendor', 'firstName lastName email phone businessName profileImage rating')
+      .populate('service', 'name description image basePrice estimatedDuration features includes')
+      .populate('category', 'name')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if user is the customer of this booking
+    if (booking.customer._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view this booking',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking details retrieved successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Get booking details error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching booking details',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Cancel booking
+ */
+exports.cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { reason } = req.body;
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if user is the customer
+    if (booking.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to cancel this booking',
+      });
+    }
+
+    // Check if booking can be cancelled
+    if (['completed', 'cancelled'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel booking with status: ${booking.status}`,
+      });
+    }
+
+    // Check if booking is within 2 hours
+    const bookingTime = new Date(booking.bookingDate);
+    const now = new Date();
+    const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60);
+
+    let refundAmount = booking.pricing.totalAmount;
+    if (hoursUntilBooking < 2) {
+      refundAmount = booking.pricing.totalAmount * 0.5; // 50% refund if cancelled within 2 hours
+    }
+
+    // Update booking
+    booking.status = 'cancelled';
+    booking.cancellation = {
+      cancelledBy: 'customer',
+      reason: reason || 'Customer initiated cancellation',
+      cancelledAt: new Date(),
+      refundAmount,
+    };
+
+    await booking.save();
+
+    await booking.populate([
+      { path: 'vendor', select: 'firstName lastName email' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking cancelled successfully',
+      data: {
+        booking,
+        refundAmount,
+        refundMessage: hoursUntilBooking < 2 ? 'You will receive 50% refund for cancellation within 2 hours of booking' : 'You will receive full refund',
+      },
+    });
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error cancelling booking',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Reschedule booking
+ */
+exports.rescheduleBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { bookingDate, timeSlot } = req.body;
+
+    if (!bookingDate || !timeSlot) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide bookingDate and timeSlot',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if user is the customer
+    if (booking.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to reschedule this booking',
+      });
+    }
+
+    // Check if booking can be rescheduled
+    if (['completed', 'cancelled', 'in_progress', 'on_the_way'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reschedule booking with status: ${booking.status}`,
+      });
+    }
+
+    // Validate new booking date is in future
+    const newBookingDate = new Date(bookingDate);
+    if (newBookingDate < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'New booking date must be in the future',
+      });
+    }
+
+    // Update booking
+    booking.bookingDate = newBookingDate;
+    booking.timeSlot = timeSlot;
+    await booking.save();
+
+    await booking.populate([
+      { path: 'vendor', select: 'firstName lastName email' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking rescheduled successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Reschedule booking error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error rescheduling booking',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get booking statistics for user
+ */
+exports.getBookingStats = async (req, res) => {
+  try {
+    const stats = await Booking.aggregate([
+      { $match: { customer: req.user._id } },
+      {
+        $group: {
+          _id: null,
+          totalBookings: { $sum: 1 },
+          completedBookings: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
+          },
+          cancelledBookings: {
+            $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] },
+          },
+          pendingBookings: {
+            $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
+          },
+          totalSpent: { $sum: '$pricing.totalAmount' },
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking statistics retrieved successfully',
+      data: stats[0] || {
+        totalBookings: 0,
+        completedBookings: 0,
+        cancelledBookings: 0,
+        pendingBookings: 0,
+        totalSpent: 0,
+      },
+    });
+  } catch (error) {
+    console.error('Get booking stats error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching booking statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Search user's bookings
+ */
+exports.searchBookings = async (req, res) => {
+  try {
+    const { query = '', status, page = 1, limit = 10 } = req.query;
+
+    const filter = { customer: req.user._id };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (query) {
+      filter.$or = [
+        { bookingId: { $regex: query, $options: 'i' } },
+      ];
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const bookings = await Booking.find(filter)
+      .populate('vendor', 'firstName lastName email businessName')
+      .populate('service', 'name image')
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    const total = await Booking.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Search results retrieved successfully',
+      data: bookings,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    console.error('Search bookings error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error searching bookings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Verify vendor start OTP (vendor arrival at service location)
+ */
+exports.verifyStartOtp = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide OTP',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if vendor is making this request
+    if (booking.vendor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the assigned vendor can verify arrival',
+      });
+    }
+
+    // Verify OTP
+    const isValidOtp = await booking.verifyStartOtp(otp);
+
+    if (!isValidOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP',
+      });
+    }
+
+    // Update booking
+    booking.otp.startVerifiedAt = new Date();
+    booking.status = 'on_the_way';
+    await booking.save();
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName phone' },
+      { path: 'vendor', select: 'firstName lastName phone' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vendor arrival verified successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Verify start OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying OTP',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Verify vendor end OTP (service completion)
+ */
+exports.verifyEndOtp = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide OTP',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if vendor is making this request
+    if (booking.vendor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the assigned vendor can verify completion',
+      });
+    }
+
+    // Verify OTP
+    const isValidOtp = await booking.verifyEndOtp(otp);
+
+    if (!isValidOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP',
+      });
+    }
+
+    // Update booking
+    booking.otp.endVerifiedAt = new Date();
+    booking.status = 'completed';
+    booking.payment.status = 'completed';
+    booking.payment.paidAt = new Date();
+    await booking.save();
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName phone' },
+      { path: 'vendor', select: 'firstName lastName phone' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Service completion verified successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Verify end OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying OTP',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Reschedule booking with history tracking
+ * Enhanced version with proper history tracking
+ */
+exports.rescheduleBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { bookingDate, timeSlot, reason } = req.body;
+
+    if (!bookingDate || !timeSlot) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide bookingDate and timeSlot',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if user is the customer
+    if (booking.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to reschedule this booking',
+      });
+    }
+
+    // Check if booking can be rescheduled
+    if (['completed', 'cancelled', 'in_progress', 'on_the_way'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot reschedule booking with status: ${booking.status}`,
+      });
+    }
+
+    // Validate new booking date is in future
+    const newBookingDate = new Date(bookingDate);
+    if (newBookingDate < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'New booking date must be in the future',
+      });
+    }
+
+    // Store previous date/slot in history before updating
+    booking.addRescheduleHistory(
+      booking.bookingDate,
+      booking.timeSlot,
+      'customer',
+      reason || 'Customer initiated reschedule'
+    );
+
+    // Update booking
+    booking.bookingDate = newBookingDate;
+    booking.timeSlot = timeSlot;
+    await booking.save();
+
+    await booking.populate([
+      { path: 'vendor', select: 'firstName lastName email' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Booking rescheduled successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Reschedule booking error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error rescheduling booking',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get reschedule history for a booking
+ */
+

@@ -17,6 +17,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:admin": "node scripts/seedAdmin.js",
+    "migrate:booking": "node scripts/migrateBookingModel.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
@@ -27,7 +28,8 @@
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.6.2"
+    "mongoose": "^9.6.2",
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

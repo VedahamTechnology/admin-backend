@@ -1,0 +1,33 @@
+const express = require('express');
+const router = express.Router();
+
+const {
+  createBooking,
+  getMyBookings,
+  getBookingDetails,
+  cancelBooking,
+  rescheduleBooking,
+  getBookingStats,
+  searchBookings,
+  verifyStartOtp,
+  verifyEndOtp,
+} = require('../../controllers/user/bookingController');
+
+const { protect, authorize } = require('../../middleware/auth');
+
+// All routes require user authentication
+router.use(protect);
+router.use(authorize('customer'));
+
+// Booking routes
+router.post('/', createBooking);
+router.get('/', getMyBookings);
+router.get('/search', searchBookings);
+router.get('/stats', getBookingStats);
+router.get('/:bookingId', getBookingDetails);
+router.put('/:bookingId/cancel', cancelBooking);
+router.put('/:bookingId/reschedule', rescheduleBooking);
+router.post('/:bookingId/verify-start-otp', verifyStartOtp);
+router.post('/:bookingId/verify-end-otp', verifyEndOtp);
+
+module.exports = router;

@@ -1,5 +1,6 @@
 const Service = require('../../models/Service');
 const User = require('../../models/User');
+const Category = require('../../models/Category');
 
 /**
  * Create a new service
@@ -23,10 +24,10 @@ exports.createService = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!name || !category || !basePrice || !estimatedDuration) {
+    if (!name || !description || !category || !basePrice || !estimatedDuration) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: name, category, basePrice, estimatedDuration',
+        message: 'Please provide all required fields: title (name), description, category, basePrice (price), and estimatedDuration',
       });
     }
 
@@ -368,5 +369,122 @@ exports.searchServices = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Get all categories (for browsing)
+ * Vendors can browse categories to view other services
+ */
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ isActive: true })
+      .select('_id categoryId name slug image description totalServices avgRating')
+      .sort({ displayOrder: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Categories retrieved successfully',
+      data: categories,
+    });
+  } catch (error) {
+    console.error('Get categories error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching categories',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get services by category
+ * Vendors can browse services in a category
+ */
+exports.getServicesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'displayOrder',
+      sortOrder = 'asc',
+      minPrice,
+      maxPrice,
+      search,
+    } = req.query;
+
+    // Validate category exists
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found',
+      });
+    }
+
+    // Build filter
+    const filter = {
+      category: categoryId,
+      isActive: true,
+    };
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      filter.basePrice = {};
+      if (minPrice) {
+        filter.basePrice.$gte = parseFloat(minPrice);
+      }
+      if (maxPrice) {
+        filter.basePrice.$lte = parseFloat(maxPrice);
+      }
+    }
+
+    // Search filter
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const services = await Service.find(filter)
+      .populate('category', 'name slug')
+      .populate('brand', 'name')
+      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    const total = await Service.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Services retrieved successfully',
+      data: services,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    console.error('Get services by category error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching services',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 };
