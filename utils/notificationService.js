@@ -1,24 +1,8 @@
-/**
- * Notification Service
- * Handles sending notifications via multiple channels:
- * - In-app (real-time via Socket.IO)
- * - Push notifications
- * - Email
- * - SMS
- */
-
 const Notification = require('../models/Notification');
 
 class NotificationService {
-  /**
-   * Send real-time notification via Socket.IO
-   * @param {Object} io - Socket.IO instance
-   * @param {string} userId - Recipient user ID
-   * @param {Object} notification - Notification object
-   */
   static async sendRealTimeNotification(io, userId, notification) {
     try {
-      // Emit to specific user's socket room
       io.to(`user:${userId}`).emit('notification', {
         success: true,
         data: {
@@ -37,44 +21,7 @@ class NotificationService {
     }
   }
 
-  /**
-   * Create and send booking notification
-   * @param {string} bookingId - Booking ID
-   * @param {Object} booking - Booking object
-   * @param {Object} io - Socket.IO instance (optional for real-time)
-   */
   static async notifyBookingCreated(bookingId, booking, io = null) {
-    try {
-      // Create notifications in database
-      const { vendorNotification, customerNotification } = await Notification.createBookingNotification(bookingId, booking);
-
-      // Send real-time notifications if Socket.IO is available
-      if (io) {
-        // Notify vendor
-        await this.sendRealTimeNotification(io, booking.vendor.toString(), vendorNotification);
-        
-        // Notify customer
-        await this.sendRealTimeNotification(io, booking.customer.toString(), customerNotification);
-      }
-
-      console.log('✓ Booking notifications created and sent');
-      return {
-        vendorNotification,
-        customerNotification,
-      };
-    } catch (error) {
-      console.error('Error in notifyBookingCreated:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send booking status update notification
-   * @param {string} bookingId - Booking ID
-   * @param {string} status - New booking status
-   * @param {Object} io - Socket.IO instance
-   */
-  static async notifyBookingStatusUpdate(bookingId, status, booking, io = null) {
     try {
       const Booking = require('../models/Booking');
       const statusMessages = {
@@ -110,7 +57,6 @@ class NotificationService {
 
       if (!populatedBooking) return;
 
-      // Notify vendor
       const vendorNotification = await Notification.create({
         recipient: populatedBooking.vendor._id,
         recipientRole: 'vendor',
@@ -127,7 +73,6 @@ class NotificationService {
         },
       });
 
-      // Notify customer
       const customerNotification = await Notification.create({
         recipient: populatedBooking.customer._id,
         recipientRole: 'customer',
@@ -144,7 +89,6 @@ class NotificationService {
         },
       });
 
-      // Send real-time notifications
       if (io) {
         await this.sendRealTimeNotification(io, populatedBooking.vendor._id.toString(), vendorNotification);
         await this.sendRealTimeNotification(io, populatedBooking.customer._id.toString(), customerNotification);
@@ -157,13 +101,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Send OTP notification
-   * @param {string} userId - User ID
-   * @param {string} otp - OTP code
-   * @param {string} type - 'start' or 'end'
-   * @param {Object} io - Socket.IO instance
-   */
   static async notifyOtpSent(userId, otp, type, bookingId, io = null) {
     try {
       const typeLabel = type === 'start' ? 'Arrival' : 'Completion';
@@ -185,7 +122,6 @@ class NotificationService {
         },
       });
 
-      // Send real-time notification
       if (io) {
         await this.sendRealTimeNotification(io, userId, notification);
       }
@@ -197,11 +133,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Get unread notifications for a user
-   * @param {string} userId - User ID
-   * @param {number} limit - Number of notifications (default 20)
-   */
   static async getUnreadNotifications(userId, limit = 20) {
     try {
       const notifications = await Notification.find({
@@ -227,13 +158,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Get all notifications for a user with pagination
-   * @param {string} userId - User ID
-   * @param {number} page - Page number
-   * @param {number} limit - Limit per page
-   * @param {string} type - Filter by type (optional)
-   */
   static async getNotifications(userId, page = 1, limit = 10, type = null) {
     try {
       const filter = { recipient: userId };
@@ -266,10 +190,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Mark notification as read
-   * @param {string} notificationId - Notification ID
-   */
   static async markAsRead(notificationId) {
     try {
       const notification = await Notification.findByIdAndUpdate(
@@ -288,10 +208,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Mark all notifications as read for a user
-   * @param {string} userId - User ID
-   */
   static async markAllAsRead(userId) {
     try {
       await Notification.updateMany(
@@ -309,10 +225,6 @@ class NotificationService {
     }
   }
 
-  /**
-   * Clear notifications for a user
-   * @param {string} userId - User ID
-   */
   static async clearNotifications(userId) {
     try {
       await Notification.deleteMany({ recipient: userId });
