@@ -27,7 +27,7 @@ exports.getAllServices = async (req, res) => {
     } = req.query;
 
     // Build filter object
-    const filter = { isActive: true };
+    const filter = { isActive: true, approvalStatus: 'approved' };
 
     // Filter by category
     if (category) {
@@ -151,6 +151,7 @@ exports.getServicesByCategory = async (req, res) => {
     const filter = {
       category: categoryId,
       isActive: true,
+      approvalStatus: 'approved',
     };
 
     // Filter by price range
@@ -239,7 +240,7 @@ exports.getServiceDetails = async (req, res) => {
       });
     }
 
-    if (!service.isActive) {
+    if (!service.isActive || service.approvalStatus !== 'approved') {
       return res.status(404).json({
         success: false,
         message: 'Service is not available',
@@ -285,6 +286,7 @@ exports.searchServices = async (req, res) => {
 
     const filter = {
       isActive: true,
+      approvalStatus: 'approved',
       $or: [
         { name: { $regex: query, $options: 'i' } },
         { description: { $regex: query, $options: 'i' } },
@@ -333,7 +335,7 @@ exports.getTopRatedServices = async (req, res) => {
     const { limit = 5 } = req.query;
     const limitNum = parseInt(limit, 10);
 
-    const services = await Service.find({ isActive: true })
+    const services = await Service.find({ isActive: true, approvalStatus: 'approved' })
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')

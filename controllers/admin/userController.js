@@ -2,9 +2,18 @@ const User = require('../../models/User');
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, isActive } = req.query;
+    const { page = 1, limit = 10, isActive, role } = req.query;
 
-    let filter = { role: 'customer' };
+    let filter = {};
+    
+    // Filter by role: customer, vendor, or all users
+    if (role && ['customer', 'vendor', 'admin'].includes(role)) {
+      filter.role = role;
+    } else if (!role) {
+      // Default to showing all non-admin users
+      filter.role = { $in: ['customer', 'vendor'] };
+    }
+    
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
     const skip = (page - 1) * limit;
@@ -22,6 +31,7 @@ exports.getAllUsers = async (req, res) => {
       total,
       page:    Number(page),
       pages:   Math.ceil(total / limit),
+      role: role || 'all',
       users,
     });
   } catch (error) {

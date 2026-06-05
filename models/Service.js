@@ -59,22 +59,54 @@ const serviceSchema = new mongoose.Schema({
   isActive:    { type: Boolean, default: true },
   displayOrder:{ type: Number, default: 0 },
 
+  // Approval Status
+  isApproved: { type: Boolean, default: false },
+  approvalStatus: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected'], 
+    default: 'pending' 
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  approvalDate: { type: Date },
+  rejectionReason: { type: String },
+
+  // Vendor who created the service
+  createdByVendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+
 }, { timestamps: true });
 
-serviceSchema.pre('save', async function() {
-  if (!this.serviceId) {
-    const count = await mongoose.model('Service').countDocuments();
-    this.serviceId = `SRV-${String(count + 1).padStart(4, '0')}`;
-  }
-  if (!this.slug) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
+serviceSchema.pre('save', async function(next) {
+  try {
+    if (!this.serviceId) {
+      const Counter = require('./Counter');
+      const counter = await Counter.findByIdAndUpdate(
+        'service',
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      this.serviceId = `SRV-${String(counter.seq).padStart(4, '0')}`;
+    }
+    if (!this.slug) {
+      this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
 });
 
-serviceSchema.index({ category: 1, isActive: 1 });
+serviceSchema.index({ category: 1, isActive: 1, approvalStatus: 1 });
 serviceSchema.index({ brand: 1 });
 // Note: slug index is already created by unique: true constraint
 serviceSchema.index({ 'ratings.average': -1 }); // For sorting by ratings
 serviceSchema.index({ basePrice: 1 }); // For price range filtering
+serviceSchema.index({ approvalStatus: 1 }); // For admin approval view
+serviceSchema.index({ createdByVendor: 1, approvalStatus: 1 }); // For vendor's pending services
 
 module.exports = mongoose.model('Service', serviceSchema);

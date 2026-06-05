@@ -26,12 +26,14 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Validate service exists
+    // Validate service exists and is APPROVED
     const service = await Service.findById(serviceId);
-    if (!service || !service.isActive) {
+    if (!service || !service.isActive || service.approvalStatus !== 'approved') {
       return res.status(404).json({
         success: false,
-        message: 'Service not found or is not available',
+        message: service && service.approvalStatus !== 'approved' 
+          ? 'Service is not approved by admin yet. Please wait for approval.'
+          : 'Service not found or is not available',
       });
     }
 
@@ -72,7 +74,8 @@ exports.createBooking = async (req, res) => {
 
     // Calculate pricing with proper breakdown
     const basePrice = vendorService.vendorPrice || service.basePrice;
-    const platformFee = (basePrice * 0.15) || 0;  // 15% platform fee (configurable)
+    const platformFeePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE) || 15;
+    const platformFee = (basePrice * (platformFeePercentage / 100)) || 0;
     const tax = (basePrice * (service.taxPercentage || 0)) / 100;
     const discount = 0;  // Can be applied via promo codes
     const totalAmount = basePrice + platformFee + tax - discount;
@@ -291,14 +294,16 @@ exports.cancelBooking = async (req, res) => {
       });
     }
 
-    // Check if booking is within 2 hours
+    // Check if booking is within window
     const bookingTime = new Date(booking.bookingDate);
     const now = new Date();
     const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60);
+    const cancellationWindow = parseFloat(process.env.CANCELLATION_WINDOW_HOURS) || 2;
+    const cancellationRefundPercentage = parseFloat(process.env.CANCELLATION_REFUND_PERCENTAGE) || 50;
 
     let refundAmount = booking.pricing.totalAmount;
-    if (hoursUntilBooking < 2) {
-      refundAmount = booking.pricing.totalAmount * 0.5; // 50% refund if cancelled within 2 hours
+    if (hoursUntilBooking < cancellationWindow) {
+      refundAmount = booking.pricing.totalAmount * (cancellationRefundPercentage / 100); // Configurable partial refund if cancelled within window
     }
 
     // Update booking
@@ -323,7 +328,7 @@ exports.cancelBooking = async (req, res) => {
       data: {
         booking,
         refundAmount,
-        refundMessage: hoursUntilBooking < 2 ? 'You will receive 50% refund for cancellation within 2 hours of booking' : 'You will receive full refund',
+        refundMessage: hoursUntilBooking < cancellationWindow ? `You will receive ${cancellationRefundPercentage}% refund for cancellation within ${cancellationWindow} hours of booking` : 'You will receive full refund',
       },
     });
   } catch (error) {
@@ -506,144 +511,6 @@ exports.searchBookings = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error searching bookings',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-  }
-};
-
-/**
- * Verify vendor start OTP (vendor arrival at service location)
- */
-exports.verifyStartOtp = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { otp } = req.body;
-
-    if (!otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide OTP',
-      });
-    }
-
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found',
-      });
-    }
-
-    // Check if vendor is making this request
-    if (booking.vendor.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the assigned vendor can verify arrival',
-      });
-    }
-
-    // Verify OTP
-    const isValidOtp = await booking.verifyStartOtp(otp);
-
-    if (!isValidOtp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired OTP',
-      });
-    }
-
-    // Update booking
-    booking.otp.startVerifiedAt = new Date();
-    booking.status = 'on_the_way';
-    await booking.save();
-
-    await booking.populate([
-      { path: 'customer', select: 'firstName lastName phone' },
-      { path: 'vendor', select: 'firstName lastName phone' },
-      { path: 'service', select: 'name' },
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Vendor arrival verified successfully',
-      data: booking,
-    });
-  } catch (error) {
-    console.error('Verify start OTP error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error verifying OTP',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-  }
-};
-
-/**
- * Verify vendor end OTP (service completion)
- */
-exports.verifyEndOtp = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { otp } = req.body;
-
-    if (!otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide OTP',
-      });
-    }
-
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found',
-      });
-    }
-
-    // Check if vendor is making this request
-    if (booking.vendor.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only the assigned vendor can verify completion',
-      });
-    }
-
-    // Verify OTP
-    const isValidOtp = await booking.verifyEndOtp(otp);
-
-    if (!isValidOtp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired OTP',
-      });
-    }
-
-    // Update booking
-    booking.otp.endVerifiedAt = new Date();
-    booking.status = 'completed';
-    booking.payment.status = 'completed';
-    booking.payment.paidAt = new Date();
-    await booking.save();
-
-    await booking.populate([
-      { path: 'customer', select: 'firstName lastName phone' },
-      { path: 'vendor', select: 'firstName lastName phone' },
-      { path: 'service', select: 'name' },
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Service completion verified successfully',
-      data: booking,
-    });
-  } catch (error) {
-    console.error('Verify end OTP error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error verifying OTP',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

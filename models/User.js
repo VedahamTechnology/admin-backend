@@ -79,18 +79,30 @@ const userSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-userSchema.pre('save', async function() {
-  if (!this.userId) {
-    const count  = await mongoose.model('User').countDocuments({ role: this.role });
-    const prefix = this.role === 'customer' ? 'UC'
-                 : this.role === 'vendor'   ? 'UV'
-                 : 'UA';
-    this.userId  = `${prefix}-${String(count + 1).padStart(5, '0')}`;
-  }
+userSchema.pre('save', async function(next) {
+  try {
+    if (!this.userId) {
+      const Counter = require('./Counter');
+      const prefix = this.role === 'customer' ? 'UC'
+                   : this.role === 'vendor'   ? 'UV'
+                   : 'UA';
 
-  if (this.isModified('password')) {
-    const salt    = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+      const counter = await Counter.findByIdAndUpdate(
+        `user_${this.role}`,
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+
+      this.userId  = `${prefix}-${String(counter.seq).padStart(5, '0')}`;
+    }
+
+    if (this.isModified('password')) {
+      const salt    = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
 });
 

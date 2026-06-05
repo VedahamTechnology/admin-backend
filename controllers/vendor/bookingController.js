@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
 const User = require('../../models/User');
 
@@ -49,8 +50,7 @@ exports.getBookingById = async (req, res) => {
     })
       .populate('customer', 'firstName lastName email phone address')
       .populate('service', 'name basePrice estimatedDuration features includes')
-      .populate('category', 'name')
-      .populate('payment');
+      .populate('category', 'name');
 
     if (!booking) {
       return res.status(404).json({
@@ -69,7 +69,8 @@ exports.getBookingById = async (req, res) => {
 };
 
 /**
- * Accept a booking
+ * Accept/Confirm a booking
+ * Updates booking status and notifies customer and admin
  */
 exports.acceptBooking = async (req, res) => {
   try {
@@ -92,17 +93,33 @@ exports.acceptBooking = async (req, res) => {
       });
     }
 
-    booking.status = 'accepted';
+    booking.status = 'confirmed';
     booking.vendorAcceptedAt = new Date();
     await booking.save();
 
+    // Send notifications to customer and admin
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingConfirmed(booking._id, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName email' },
+      { path: 'vendor', select: 'businessName firstName lastName email' },
+      { path: 'service', select: 'name' },
+    ]);
+
     res.status(200).json({
       success: true,
-      message: 'Booking accepted successfully',
+      message: 'Booking confirmed successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
+        vendorAcceptedAt: booking.vendorAcceptedAt,
       },
     });
   } catch (error) {
@@ -112,6 +129,7 @@ exports.acceptBooking = async (req, res) => {
 
 /**
  * Reject a booking
+ * Updates booking status and notifies customer and admin with rejection reason
  */
 exports.rejectBooking = async (req, res) => {
   try {
@@ -143,19 +161,36 @@ exports.rejectBooking = async (req, res) => {
       });
     }
 
-    booking.status = 'rejected';
-    booking.rejectionReason = reason;
-    booking.rejectedAt = new Date();
+    booking.status = 'cancelled';
+    booking.cancellation = {
+      cancelledBy: 'vendor',
+      reason: reason,
+      cancelledAt: new Date(),
+    };
     await booking.save();
+
+    // Send notifications to customer and admin
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingRejected(booking._id, reason, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName email' },
+      { path: 'vendor', select: 'businessName firstName lastName' },
+    ]);
 
     res.status(200).json({
       success: true,
-      message: 'Booking rejected successfully',
+      message: 'Booking rejected successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
-        reason,
+        cancellation: booking.cancellation,
       },
     });
   } catch (error) {
@@ -165,6 +200,7 @@ exports.rejectBooking = async (req, res) => {
 
 /**
  * Mark booking as completed
+ * Updates booking status to completed and notifies all parties
  */
 exports.completeBooking = async (req, res) => {
   try {
@@ -180,10 +216,10 @@ exports.completeBooking = async (req, res) => {
       });
     }
 
-    if (booking.status !== 'accepted') {
+    if (booking.status !== 'confirmed') {
       return res.status(400).json({
         success: false,
-        message: `Only accepted bookings can be marked as completed`,
+        message: `Only confirmed bookings can be marked as completed. Current status: ${booking.status}`,
       });
     }
 
@@ -191,14 +227,30 @@ exports.completeBooking = async (req, res) => {
     booking.completedAt = new Date();
     await booking.save();
 
+    // Send notifications to customer and admin
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingCompleted(booking._id, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName email' },
+      { path: 'vendor', select: 'businessName firstName lastName' },
+      { path: 'service', select: 'name' },
+    ]);
+
     res.status(200).json({
       success: true,
-      message: 'Booking marked as completed successfully',
+      message: 'Booking marked as completed successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
         completedAt: booking.completedAt,
+        customerEmail: booking.customer.email,
       },
     });
   } catch (error) {
@@ -208,6 +260,7 @@ exports.completeBooking = async (req, res) => {
 
 /**
  * Cancel a booking by vendor
+ * Notifies customer and admin with cancellation reason
  */
 exports.cancelBooking = async (req, res) => {
   try {
@@ -232,26 +285,39 @@ exports.cancelBooking = async (req, res) => {
       });
     }
 
-    // Only pending or accepted bookings can be cancelled
-    if (!['pending', 'accepted'].includes(booking.status)) {
+    // Only confirmed bookings can be cancelled (not pending)
+    if (!['confirmed'].includes(booking.status)) {
       return res.status(400).json({
         success: false,
-        message: `Booking with status '${booking.status}' cannot be cancelled`,
+        message: `Booking with status '${booking.status}' cannot be cancelled. Only confirmed bookings can be cancelled.`,
       });
     }
 
     booking.status = 'cancelled';
-    booking.cancellationReason = reason;
-    booking.cancelledAt = new Date();
+    booking.cancellation = {
+      cancelledBy: 'vendor',
+      reason: reason,
+      cancelledAt: new Date(),
+    };
     await booking.save();
+
+    // Send notifications to customer and admin
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingRejected(booking._id, reason, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Booking cancelled successfully',
+      message: 'Booking cancelled successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
         bookingId: booking.bookingId,
         status: booking.status,
+        cancellation: booking.cancellation,
       },
     });
   } catch (error) {
@@ -266,7 +332,7 @@ exports.getBookingStats = async (req, res) => {
   try {
     const stats = await Booking.aggregate([
       {
-        $match: { vendor: require('mongoose').Types.ObjectId(req.user._id) },
+        $match: { vendor: new mongoose.Types.ObjectId(req.user._id) },
       },
       {
         $group: {
@@ -400,6 +466,144 @@ exports.submitProofOfWork = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error submitting proof of work',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Verify vendor start OTP (vendor arrival at service location)
+ */
+exports.verifyStartOtp = async (req, res) => {
+  try {
+    const { id: bookingId } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide OTP',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if vendor is making this request
+    if (booking.vendor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the assigned vendor can verify arrival',
+      });
+    }
+
+    // Verify OTP
+    const isValidOtp = await booking.verifyStartOtp(otp);
+
+    if (!isValidOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP',
+      });
+    }
+
+    // Update booking
+    booking.otp.startVerifiedAt = new Date();
+    booking.status = 'on_the_way';
+    await booking.save();
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName phone' },
+      { path: 'vendor', select: 'firstName lastName phone' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vendor arrival verified successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Verify start OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying OTP',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Verify vendor end OTP (service completion)
+ */
+exports.verifyEndOtp = async (req, res) => {
+  try {
+    const { id: bookingId } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide OTP',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if vendor is making this request
+    if (booking.vendor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the assigned vendor can verify completion',
+      });
+    }
+
+    // Verify OTP
+    const isValidOtp = await booking.verifyEndOtp(otp);
+
+    if (!isValidOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP',
+      });
+    }
+
+    // Update booking
+    booking.otp.endVerifiedAt = new Date();
+    booking.status = 'completed';
+    booking.payment.status = 'completed';
+    booking.payment.paidAt = new Date();
+    await booking.save();
+
+    await booking.populate([
+      { path: 'customer', select: 'firstName lastName phone' },
+      { path: 'vendor', select: 'firstName lastName phone' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Service completion verified successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Verify end OTP error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying OTP',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

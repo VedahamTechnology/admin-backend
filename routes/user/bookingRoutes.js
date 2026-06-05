@@ -9,8 +9,6 @@ const {
   rescheduleBooking,
   getBookingStats,
   searchBookings,
-  verifyStartOtp,
-  verifyEndOtp,
 } = require('../../controllers/user/bookingController');
 
 const { protect, authorize } = require('../../middleware/auth');
@@ -27,7 +25,5 @@ router.get('/stats', getBookingStats);
 router.get('/:bookingId', getBookingDetails);
 router.put('/:bookingId/cancel', cancelBooking);
 router.put('/:bookingId/reschedule', rescheduleBooking);
-router.post('/:bookingId/verify-start-otp', verifyStartOtp);
-router.post('/:bookingId/verify-end-otp', verifyEndOtp);
 
 module.exports = router;

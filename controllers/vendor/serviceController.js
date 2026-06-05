@@ -1,10 +1,12 @@
 const Service = require('../../models/Service');
 const User = require('../../models/User');
 const Category = require('../../models/Category');
+const NotificationService = require('../../utils/notificationService');
 
 /**
  * Create a new service
  * Only vendors can create services
+ * Service will be in pending status and requires admin approval
  */
 exports.createService = async (req, res) => {
   try {
@@ -32,7 +34,7 @@ exports.createService = async (req, res) => {
     }
 
     // Vendor existence and approval is already verified by middleware
-    // Create service
+    // Create service with pending approval status
     const service = await Service.create({
       name,
       description,
@@ -53,15 +55,36 @@ exports.createService = async (req, res) => {
           isAvailable: true,
         },
       ],
+      // Set initial approval status
+      isApproved: false,
+      approvalStatus: 'pending',
+      createdByVendor: req.user._id,
     });
 
     // Populate category information
     await service.populate('category', 'name');
 
+    // Notify admin about new service pending approval
+    const adminUser = await User.findOne({ role: 'admin' });
+    if (adminUser) {
+      try {
+        await NotificationService.notifyServicePendingApproval(
+          service._id,
+          service.name,
+          req.user._id,
+          adminUser._id
+        );
+      } catch (notificationError) {
+        console.error('Error sending notification to admin:', notificationError);
+        // Don't fail the request if notification fails
+      }
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Service created successfully',
+      message: 'Service created successfully and is pending admin approval',
       service,
+      status: 'pending_approval'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -70,18 +93,23 @@ exports.createService = async (req, res) => {
 
 /**
  * Get all services created by the vendor
+ * Shows services with all approval statuses
  */
 exports.getMyServices = async (req, res) => {
   try {
-    const { page = 1, limit = 10, isActive } = req.query;
+    const { page = 1, limit = 10, isActive, approvalStatus } = req.query;
 
-    // Find services where this vendor is in the vendors array
+    // Find services created by this vendor
     let filter = {
-      'vendors.vendorId': req.user._id,
+      createdByVendor: req.user._id,
     };
 
     if (isActive !== undefined) {
       filter.isActive = isActive === 'true';
+    }
+
+    if (approvalStatus) {
+      filter.approvalStatus = approvalStatus;
     }
 
     const skip = (page - 1) * limit;
@@ -95,11 +123,20 @@ exports.getMyServices = async (req, res) => {
 
     const total = await Service.countDocuments(filter);
 
+    // Count services by approval status for summary
+    const statusCounts = {
+      pending: await Service.countDocuments({ createdByVendor: req.user._id, approvalStatus: 'pending' }),
+      approved: await Service.countDocuments({ createdByVendor: req.user._id, approvalStatus: 'approved' }),
+      rejected: await Service.countDocuments({ createdByVendor: req.user._id, approvalStatus: 'rejected' }),
+    };
+
     res.status(200).json({
       success: true,
       total,
       page: Number(page),
+      limit: Number(limit),
       pages: Math.ceil(total / limit),
+      statusCounts,
       services,
     });
   } catch (error) {

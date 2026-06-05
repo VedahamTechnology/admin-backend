@@ -24,63 +24,49 @@ class NotificationService {
   static async notifyBookingCreated(bookingId, booking, io = null) {
     try {
       const Booking = require('../models/Booking');
-      const statusMessages = {
-        confirmed: {
-          vendor: '✓ Booking confirmed',
-          customer: '✓ Your booking has been confirmed!',
-        },
-        on_the_way: {
-          vendor: 'Service started',
-          customer: '🚗 Service provider is on the way',
-        },
-        in_progress: {
-          vendor: 'Service in progress',
-          customer: '🔧 Service is in progress',
-        },
-        completed: {
-          vendor: '✓ Service completed',
-          customer: '✓ Service completed! Please rate your experience',
-        },
-        cancelled: {
-          vendor: '✗ Booking cancelled',
-          customer: '✗ Booking has been cancelled',
-        },
-      };
-
-      const messages = statusMessages[status];
-      if (!messages) return;
+      const User = require('../models/User');
 
       const populatedBooking = await Booking.findById(bookingId)
-        .populate('vendor', '_id firstName lastName')
-        .populate('customer', '_id firstName lastName')
-        .populate('service', 'name');
+        .populate('vendor', '_id firstName lastName email businessName')
+        .populate('customer', '_id firstName lastName email')
+        .populate('service', 'name basePrice')
+        .lean();
 
       if (!populatedBooking) return;
 
+      // Notify vendor about new booking pending confirmation
       const vendorNotification = await Notification.create({
         recipient: populatedBooking.vendor._id,
         recipientRole: 'vendor',
-        type: `booking_${status}`,
-        title: messages.vendor,
-        message: `Booking ${populatedBooking.bookingId}: ${messages.vendor}`,
+        type: 'booking_created',
+        title: '� New Booking Request',
+        message: `New booking received from ${populatedBooking.customer.firstName} ${populatedBooking.customer.lastName}`,
+        description: `Service: ${populatedBooking.service.name} | Amount: ₹${populatedBooking.pricing.totalAmount}`,
         relatedData: {
           bookingId: populatedBooking._id,
+          customerId: populatedBooking.customer._id,
+          serviceId: populatedBooking.service._id,
+          amount: populatedBooking.pricing.totalAmount,
         },
         metadata: {
           action: `/vendor/bookings/${bookingId}`,
-          actionLabel: 'View Booking',
-          priority: status === 'cancelled' ? 'normal' : 'high',
+          actionLabel: 'View & Confirm',
+          priority: 'high',
         },
       });
 
+      // Notify customer that booking is pending vendor confirmation
       const customerNotification = await Notification.create({
         recipient: populatedBooking.customer._id,
         recipientRole: 'customer',
-        type: `booking_${status}`,
-        title: messages.customer,
-        message: messages.customer,
+        type: 'booking_created',
+        title: '✅ Booking Request Sent',
+        message: `Your booking request has been sent to ${populatedBooking.vendor.businessName || populatedBooking.vendor.firstName}`,
+        description: `Booking ID: ${populatedBooking.bookingId} | Awaiting confirmation`,
         relatedData: {
           bookingId: populatedBooking._id,
+          vendorId: populatedBooking.vendor._id,
+          serviceId: populatedBooking.service._id,
         },
         metadata: {
           action: `/customer/bookings/${bookingId}`,
@@ -89,6 +75,34 @@ class NotificationService {
         },
       });
 
+      // Notify admin about new booking
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        const adminNotification = await Notification.create({
+          recipient: adminUser._id,
+          recipientRole: 'admin',
+          type: 'booking_created',
+          title: '📊 New Booking Created',
+          message: `Booking ${populatedBooking.bookingId} - ${populatedBooking.customer.firstName} → ${populatedBooking.vendor.businessName}`,
+          description: `Amount: ₹${populatedBooking.pricing.totalAmount}`,
+          relatedData: {
+            bookingId: populatedBooking._id,
+            customerId: populatedBooking.customer._id,
+            vendorId: populatedBooking.vendor._id,
+            amount: populatedBooking.pricing.totalAmount,
+          },
+          metadata: {
+            action: `/admin/bookings/${bookingId}`,
+            actionLabel: 'View Booking',
+            priority: 'normal',
+          },
+        });
+
+        if (io) {
+          await this.sendRealTimeNotification(io, adminUser._id.toString(), adminNotification);
+        }
+      }
+
       if (io) {
         await this.sendRealTimeNotification(io, populatedBooking.vendor._id.toString(), vendorNotification);
         await this.sendRealTimeNotification(io, populatedBooking.customer._id.toString(), customerNotification);
@@ -96,7 +110,7 @@ class NotificationService {
 
       return { vendorNotification, customerNotification };
     } catch (error) {
-      console.error('Error in notifyBookingStatusUpdate:', error);
+      console.error('Error in notifyBookingCreated:', error);
       throw error;
     }
   }
@@ -231,6 +245,318 @@ class NotificationService {
       return { success: true };
     } catch (error) {
       console.error('Error in clearNotifications:', error);
+      throw error;
+    }
+  }
+
+  static async notifyServicePendingApproval(serviceId, serviceName, vendorId, adminId) {
+    try {
+      const notification = await Notification.create({
+        recipient: adminId,
+        recipientRole: 'admin',
+        type: 'service_pending_approval',
+        title: '⏳ New Service Pending Review',
+        message: `A new service "${serviceName}" has been submitted by a vendor and requires your review`,
+        description: 'Please review the service details and approve or reject it',
+        relatedData: {
+          serviceId,
+          vendorId,
+        },
+        metadata: {
+          action: `/admin/services/pending/${serviceId}`,
+          actionLabel: 'Review Service',
+          priority: 'high',
+        },
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('Error in notifyServicePendingApproval:', error);
+      throw error;
+    }
+  }
+
+  static async notifyServiceApproved(serviceId, serviceName, vendorId) {
+    try {
+      const notification = await Notification.create({
+        recipient: vendorId,
+        recipientRole: 'vendor',
+        type: 'service_approved',
+        title: '✅ Service Approved',
+        message: `Your service "${serviceName}" has been approved by admin`,
+        description: 'Your service is now visible to customers and can be booked',
+        relatedData: {
+          serviceId,
+        },
+        metadata: {
+          action: `/vendor/services/${serviceId}`,
+          actionLabel: 'View Service',
+          priority: 'high',
+        },
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('Error in notifyServiceApproved:', error);
+      throw error;
+    }
+  }
+
+  static async notifyServiceRejected(serviceId, serviceName, vendorId, rejectionReason) {
+    try {
+      const notification = await Notification.create({
+        recipient: vendorId,
+        recipientRole: 'vendor',
+        type: 'service_rejected',
+        title: '❌ Service Rejected',
+        message: `Your service "${serviceName}" has been rejected by admin`,
+        description: `Reason: ${rejectionReason}`,
+        relatedData: {
+          serviceId,
+          rejectionReason,
+        },
+        metadata: {
+          action: `/vendor/services/${serviceId}`,
+          actionLabel: 'View Details',
+          priority: 'normal',
+        },
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('Error in notifyServiceRejected:', error);
+      throw error;
+    }
+  }
+
+  static async notifyBookingConfirmed(bookingId, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+      const User = require('../models/User');
+
+      const booking = await Booking.findById(bookingId)
+        .populate('vendor', '_id firstName lastName email businessName')
+        .populate('customer', '_id firstName lastName email')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking) return;
+
+      // Notify customer that booking is confirmed
+      const customerNotification = await Notification.create({
+        recipient: booking.customer._id,
+        recipientRole: 'customer',
+        type: 'booking_confirmed',
+        title: '✅ Booking Confirmed!',
+        message: `${booking.vendor.businessName || booking.vendor.firstName} has confirmed your booking`,
+        description: `Booking ID: ${booking.bookingId} | Date: ${new Date(booking.bookingDate).toLocaleDateString()}`,
+        relatedData: {
+          bookingId: booking._id,
+          vendorId: booking.vendor._id,
+          serviceId: booking.service._id,
+        },
+        metadata: {
+          action: `/customer/bookings/${bookingId}`,
+          actionLabel: 'View Details',
+          priority: 'high',
+        },
+      });
+
+      // Notify admin about booking confirmation
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        const adminNotification = await Notification.create({
+          recipient: adminUser._id,
+          recipientRole: 'admin',
+          type: 'booking_confirmed',
+          title: '✅ Booking Confirmed',
+          message: `Booking ${booking.bookingId} confirmed by vendor`,
+          description: `Vendor: ${booking.vendor.businessName} | Customer: ${booking.customer.firstName}`,
+          relatedData: {
+            bookingId: booking._id,
+            vendorId: booking.vendor._id,
+            customerId: booking.customer._id,
+          },
+          metadata: {
+            action: `/admin/bookings/${bookingId}`,
+            actionLabel: 'View Booking',
+            priority: 'normal',
+          },
+        });
+
+        if (io) {
+          await this.sendRealTimeNotification(io, adminUser._id.toString(), adminNotification);
+        }
+      }
+
+      if (io) {
+        await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
+      }
+
+      return customerNotification;
+    } catch (error) {
+      console.error('Error in notifyBookingConfirmed:', error);
+      throw error;
+    }
+  }
+
+  static async notifyBookingCompleted(bookingId, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+      const User = require('../models/User');
+
+      const booking = await Booking.findById(bookingId)
+        .populate('vendor', '_id firstName lastName email businessName')
+        .populate('customer', '_id firstName lastName email')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking) return;
+
+      // Notify customer that service is completed
+      const customerNotification = await Notification.create({
+        recipient: booking.customer._id,
+        recipientRole: 'customer',
+        type: 'service_completed',
+        title: '✅ Service Completed',
+        message: `Your ${booking.service.name} service has been completed`,
+        description: `Booking ID: ${booking.bookingId} | Please rate your experience`,
+        relatedData: {
+          bookingId: booking._id,
+          vendorId: booking.vendor._id,
+          serviceId: booking.service._id,
+        },
+        metadata: {
+          action: `/customer/bookings/${bookingId}`,
+          actionLabel: 'Rate Service',
+          priority: 'normal',
+        },
+      });
+
+      // Notify vendor that service is completed
+      const vendorNotification = await Notification.create({
+        recipient: booking.vendor._id,
+        recipientRole: 'vendor',
+        type: 'service_completed',
+        title: '✅ Service Completed',
+        message: `Your service for ${booking.customer.firstName} has been marked as completed`,
+        description: `Booking ID: ${booking.bookingId}`,
+        relatedData: {
+          bookingId: booking._id,
+          customerId: booking.customer._id,
+        },
+        metadata: {
+          action: `/vendor/bookings/${bookingId}`,
+          actionLabel: 'View Details',
+          priority: 'normal',
+        },
+      });
+
+      // Notify admin about service completion
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        const adminNotification = await Notification.create({
+          recipient: adminUser._id,
+          recipientRole: 'admin',
+          type: 'service_completed',
+          title: '✅ Service Completed',
+          message: `Booking ${booking.bookingId} marked as completed`,
+          description: `Vendor: ${booking.vendor.businessName} | Amount: ₹${booking.pricing.totalAmount}`,
+          relatedData: {
+            bookingId: booking._id,
+            vendorId: booking.vendor._id,
+            customerId: booking.customer._id,
+          },
+          metadata: {
+            action: `/admin/bookings/${bookingId}`,
+            actionLabel: 'View Booking',
+            priority: 'normal',
+          },
+        });
+
+        if (io) {
+          await this.sendRealTimeNotification(io, adminUser._id.toString(), adminNotification);
+        }
+      }
+
+      if (io) {
+        await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
+        await this.sendRealTimeNotification(io, booking.vendor._id.toString(), vendorNotification);
+      }
+
+      return { customerNotification, vendorNotification };
+    } catch (error) {
+      console.error('Error in notifyBookingCompleted:', error);
+      throw error;
+    }
+  }
+
+  static async notifyBookingRejected(bookingId, rejectionReason, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+      const User = require('../models/User');
+
+      const booking = await Booking.findById(bookingId)
+        .populate('vendor', '_id firstName lastName email businessName')
+        .populate('customer', '_id firstName lastName email')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking) return;
+
+      // Notify customer that booking is rejected
+      const customerNotification = await Notification.create({
+        recipient: booking.customer._id,
+        recipientRole: 'customer',
+        type: 'booking_cancelled',
+        title: '❌ Booking Rejected',
+        message: `${booking.vendor.businessName || booking.vendor.firstName} has rejected your booking`,
+        description: `Reason: ${rejectionReason}`,
+        relatedData: {
+          bookingId: booking._id,
+          vendorId: booking.vendor._id,
+        },
+        metadata: {
+          action: `/customer/bookings/${bookingId}`,
+          actionLabel: 'View Details',
+          priority: 'high',
+        },
+      });
+
+      // Notify admin
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        const adminNotification = await Notification.create({
+          recipient: adminUser._id,
+          recipientRole: 'admin',
+          type: 'booking_cancelled',
+          title: '❌ Booking Rejected',
+          message: `Booking ${booking.bookingId} rejected by vendor`,
+          description: `Reason: ${rejectionReason}`,
+          relatedData: {
+            bookingId: booking._id,
+            vendorId: booking.vendor._id,
+            customerId: booking.customer._id,
+          },
+          metadata: {
+            action: `/admin/bookings/${bookingId}`,
+            actionLabel: 'View Booking',
+            priority: 'normal',
+          },
+        });
+
+        if (io) {
+          await this.sendRealTimeNotification(io, adminUser._id.toString(), adminNotification);
+        }
+      }
+
+      if (io) {
+        await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
+      }
+
+      return customerNotification;
+    } catch (error) {
+      console.error('Error in notifyBookingRejected:', error);
       throw error;
     }
   }
