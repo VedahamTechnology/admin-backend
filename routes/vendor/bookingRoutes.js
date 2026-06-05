@@ -13,6 +13,7 @@ const {
   submitProofOfWork,
   verifyStartOtp,
   verifyEndOtp,
+  assignWorker,
 } = require('../../controllers/vendor/bookingController');
 
 const { protect, authorize, verifyVendorApproval } = require('../../middleware/auth');
@@ -30,6 +31,7 @@ router.get('/:id', getBookingById);
 router.put('/:id/accept', acceptBooking);
 router.put('/:id/reject', rejectBooking);
 router.put('/:id/complete', completeBooking);
+router.put('/:id/assign-worker', assignWorker);
 router.post('/:id/verify-start-otp', verifyStartOtp);
 router.post('/:id/verify-end-otp', verifyEndOtp);
 router.post('/:id/proof-of-work', submitProofOfWork);

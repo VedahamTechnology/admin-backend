@@ -9,6 +9,7 @@ const {
   rescheduleBooking,
   getBookingStats,
   searchBookings,
+  getVendorAvailability,
 } = require('../../controllers/user/bookingController');
 
 const { protect, authorize } = require('../../middleware/auth');
@@ -22,6 +23,7 @@ router.post('/', createBooking);
 router.get('/', getMyBookings);
 router.get('/search', searchBookings);
 router.get('/stats', getBookingStats);
+router.get('/vendor-availability/:vendorId', getVendorAvailability);
 router.get('/:bookingId', getBookingDetails);
 router.put('/:bookingId/cancel', cancelBooking);
 router.put('/:bookingId/reschedule', rescheduleBooking);

@@ -19,6 +19,7 @@ exports.getMyBookings = async (req, res) => {
 
     const bookings = await Booking.find(filter)
       .populate('customer', 'firstName lastName email phone')
+      .populate('worker', 'firstName lastName phone profileImage')
       .populate('service', 'name basePrice estimatedDuration')
       .populate('category', 'name')
       .sort({ bookingDate: -1 })
@@ -49,6 +50,7 @@ exports.getBookingById = async (req, res) => {
       vendor: req.user._id,
     })
       .populate('customer', 'firstName lastName email phone address')
+      .populate('worker', 'firstName lastName phone profileImage')
       .populate('service', 'name basePrice estimatedDuration features includes')
       .populate('category', 'name');
 
@@ -604,6 +606,101 @@ exports.verifyEndOtp = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error verifying OTP',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Assign a worker to a booking
+ */
+exports.assignWorker = async (req, res) => {
+  try {
+    const { id: bookingId } = req.params;
+    const { workerId } = req.body;
+
+    if (!workerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide workerId',
+      });
+    }
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      vendor: req.user._id,
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check if worker exists and belongs to this vendor
+    const worker = await User.findOne({
+      _id: workerId,
+      vendorId: req.user._id,
+      role: 'worker',
+    });
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker not found or does not belong to your business',
+      });
+    }
+
+    // Check if worker is already booked for this time slot
+    const overlappingBooking = await Booking.findOne({
+      _id: { $ne: booking._id },
+      worker: workerId,
+      bookingDate: booking.bookingDate,
+      status: { $in: ['confirmed', 'on_the_way', 'in_progress'] },
+      $or: [
+        {
+          'timeSlot.startTime': { $lt: booking.timeSlot.endTime },
+          'timeSlot.endTime': { $gt: booking.timeSlot.startTime },
+        },
+      ],
+    });
+
+    if (overlappingBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Worker is already assigned to another booking during this time slot',
+      });
+    }
+
+    booking.worker = workerId;
+    await booking.save();
+
+    // Notify customer about worker assignment
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      await NotificationService.notifyWorkerAssigned(booking._id, io);
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
+
+    await booking.populate([
+      { path: 'worker', select: 'firstName lastName phone' },
+      { path: 'customer', select: 'firstName lastName phone' },
+      { path: 'service', select: 'name' },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Worker assigned successfully',
+      data: booking,
+    });
+  } catch (error) {
+    console.error('Assign worker error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error assigning worker',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

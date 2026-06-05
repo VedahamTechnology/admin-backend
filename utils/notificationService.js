@@ -337,10 +337,18 @@ class NotificationService {
       const booking = await Booking.findById(bookingId)
         .populate('vendor', '_id firstName lastName email businessName')
         .populate('customer', '_id firstName lastName email')
+        .populate('worker', '_id firstName lastName phone profileImage')
         .populate('service', 'name')
         .lean();
 
       if (!booking) return;
+
+      let message = `${booking.vendor.businessName || booking.vendor.firstName} has confirmed your booking`;
+      let description = `Booking ID: ${booking.bookingId} | Date: ${new Date(booking.bookingDate).toLocaleDateString()}`;
+
+      if (booking.worker) {
+        description += ` | Worker: ${booking.worker.firstName} ${booking.worker.lastName}`;
+      }
 
       // Notify customer that booking is confirmed
       const customerNotification = await Notification.create({
@@ -348,12 +356,13 @@ class NotificationService {
         recipientRole: 'customer',
         type: 'booking_confirmed',
         title: '✅ Booking Confirmed!',
-        message: `${booking.vendor.businessName || booking.vendor.firstName} has confirmed your booking`,
-        description: `Booking ID: ${booking.bookingId} | Date: ${new Date(booking.bookingDate).toLocaleDateString()}`,
+        message: message,
+        description: description,
         relatedData: {
           bookingId: booking._id,
           vendorId: booking.vendor._id,
           serviceId: booking.service._id,
+          workerId: booking.worker ? booking.worker._id : null,
         },
         metadata: {
           action: `/customer/bookings/${bookingId}`,
@@ -396,6 +405,47 @@ class NotificationService {
       return customerNotification;
     } catch (error) {
       console.error('Error in notifyBookingConfirmed:', error);
+      throw error;
+    }
+  }
+
+  static async notifyWorkerAssigned(bookingId, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+
+      const booking = await Booking.findById(bookingId)
+        .populate('customer', '_id')
+        .populate('worker', 'firstName lastName phone profileImage')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking || !booking.worker) return;
+
+      const customerNotification = await Notification.create({
+        recipient: booking.customer._id,
+        recipientRole: 'customer',
+        type: 'worker_assigned',
+        title: '👷 Worker Assigned',
+        message: `${booking.worker.firstName} ${booking.worker.lastName} has been assigned to your ${booking.service.name} service`,
+        description: `Contact: ${booking.worker.phone}`,
+        relatedData: {
+          bookingId: booking._id,
+          workerId: booking.worker._id,
+        },
+        metadata: {
+          action: `/customer/bookings/${bookingId}`,
+          actionLabel: 'View Details',
+          priority: 'normal',
+        },
+      });
+
+      if (io) {
+        await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
+      }
+
+      return customerNotification;
+    } catch (error) {
+      console.error('Error in notifyWorkerAssigned:', error);
       throw error;
     }
   }

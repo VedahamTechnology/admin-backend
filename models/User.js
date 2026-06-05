@@ -16,13 +16,36 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type:     String,
-    enum:     ['customer', 'vendor', 'admin'],
+    enum:     ['customer', 'vendor', 'worker', 'admin'],
     default:  'customer',
     required: true,
   },
 
   isActive: { type: Boolean, default: true },
   isBanned: { type: Boolean, default: false },
+
+  // For workers: linked to their vendor
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: function() { return this.role === 'worker'; }
+  },
+
+  worker: {
+    aadharNumber: { type: String },
+    panNumber:    { type: String },
+    serviceCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+    verificationStatus: {
+      type:    String,
+      enum:    ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    rejectionReason: { type: String },
+    registeredOn:    { type: Date, default: Date.now },
+    documents: {
+      aadharFront: { url: { type: String }, isVerified: { type: Boolean, default: false } },
+    },
+  },
 
   location: {
     type: {
@@ -85,6 +108,7 @@ userSchema.pre('save', async function(next) {
       const Counter = require('./Counter');
       const prefix = this.role === 'customer' ? 'UC'
                    : this.role === 'vendor'   ? 'UV'
+                   : this.role === 'worker'   ? 'UW'
                    : 'UA';
 
       const counter = await Counter.findByIdAndUpdate(
@@ -111,6 +135,7 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 };
 
 userSchema.index({ role: 1 });
+userSchema.index({ vendorId: 1 });
 userSchema.index({ location: '2dsphere' });
 userSchema.index({ 'vendor.currentLocation': '2dsphere' });
 userSchema.index({ 'vendor.verificationStatus': 1 });

@@ -28,6 +28,11 @@ const bookingSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  worker: {
+    type:     mongoose.Schema.Types.ObjectId,
+    ref:      'User',
+    index: true,
+  },
   service: {
     type:     mongoose.Schema.Types.ObjectId,
     ref:      'Service',

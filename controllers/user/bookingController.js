@@ -72,6 +72,26 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // Check for overlapping bookings to prevent double booking
+    const overlappingBooking = await Booking.findOne({
+      vendor: vendorId,
+      bookingDate: bookingDateTime,
+      status: { $in: ['pending', 'confirmed', 'on_the_way', 'in_progress'] },
+      $or: [
+        {
+          'timeSlot.startTime': { $lt: timeSlot.endTime },
+          'timeSlot.endTime': { $gt: timeSlot.startTime },
+        },
+      ],
+    });
+
+    if (overlappingBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor is already booked for this time slot. Please choose another time.',
+      });
+    }
+
     // Calculate pricing with proper breakdown
     const basePrice = vendorService.vendorPrice || service.basePrice;
     const platformFeePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE) || 15;
@@ -186,6 +206,7 @@ exports.getMyBookings = async (req, res) => {
     // Fetch bookings
     const bookings = await Booking.find(filter)
       .populate('vendor', 'firstName lastName email phone businessName profileImage rating')
+      .populate('worker', 'firstName lastName phone profileImage')
       .populate('service', 'name description image basePrice estimatedDuration')
       .populate('category', 'name')
       .sort(sortObj)
@@ -227,6 +248,7 @@ exports.getBookingDetails = async (req, res) => {
     const booking = await Booking.findById(bookingId)
       .populate('customer', 'firstName lastName email phone profileImage')
       .populate('vendor', 'firstName lastName email phone businessName profileImage rating')
+      .populate('worker', 'firstName lastName phone profileImage')
       .populate('service', 'name description image basePrice estimatedDuration features includes')
       .populate('category', 'name')
       .lean();
@@ -336,80 +358,6 @@ exports.cancelBooking = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error cancelling booking',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-  }
-};
-
-/**
- * Reschedule booking
- */
-exports.rescheduleBooking = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { bookingDate, timeSlot } = req.body;
-
-    if (!bookingDate || !timeSlot) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide bookingDate and timeSlot',
-      });
-    }
-
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found',
-      });
-    }
-
-    // Check if user is the customer
-    if (booking.customer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to reschedule this booking',
-      });
-    }
-
-    // Check if booking can be rescheduled
-    if (['completed', 'cancelled', 'in_progress', 'on_the_way'].includes(booking.status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot reschedule booking with status: ${booking.status}`,
-      });
-    }
-
-    // Validate new booking date is in future
-    const newBookingDate = new Date(bookingDate);
-    if (newBookingDate < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'New booking date must be in the future',
-      });
-    }
-
-    // Update booking
-    booking.bookingDate = newBookingDate;
-    booking.timeSlot = timeSlot;
-    await booking.save();
-
-    await booking.populate([
-      { path: 'vendor', select: 'firstName lastName email' },
-      { path: 'service', select: 'name' },
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Booking rescheduled successfully',
-      data: booking,
-    });
-  } catch (error) {
-    console.error('Reschedule booking error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error rescheduling booking',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
@@ -566,6 +514,27 @@ exports.rescheduleBooking = async (req, res) => {
       });
     }
 
+    // Check for overlapping bookings to prevent double booking during reschedule
+    const overlappingBooking = await Booking.findOne({
+      _id: { $ne: booking._id }, // Exclude the current booking itself
+      vendor: booking.vendor,
+      bookingDate: newBookingDate,
+      status: { $in: ['pending', 'confirmed', 'on_the_way', 'in_progress'] },
+      $or: [
+        {
+          'timeSlot.startTime': { $lt: timeSlot.endTime },
+          'timeSlot.endTime': { $gt: timeSlot.startTime },
+        },
+      ],
+    });
+
+    if (overlappingBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor is already booked for this time slot. Please choose another time.',
+      });
+    }
+
     // Store previous date/slot in history before updating
     booking.addRescheduleHistory(
       booking.bookingDate,
@@ -594,6 +563,59 @@ exports.rescheduleBooking = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error rescheduling booking',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get vendor availability for a specific date
+ */
+exports.getVendorAvailability = async (req, res) => {
+  try {
+    const { vendorId } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a date (YYYY-MM-DD)',
+      });
+    }
+
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const busyBookings = await Booking.find({
+      vendor: vendorId,
+      bookingDate: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+      status: { $in: ['pending', 'confirmed', 'on_the_way', 'in_progress'] },
+    })
+      .select('timeSlot')
+      .lean();
+
+    const busySlots = busyBookings.map((b) => b.timeSlot);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vendor availability retrieved successfully',
+      data: {
+        vendorId,
+        date,
+        busySlots,
+      },
+    });
+  } catch (error) {
+    console.error('Get vendor availability error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching vendor availability',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
