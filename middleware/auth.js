@@ -57,7 +57,7 @@ exports.authorize = (...roles) => {
         message: `Role '${req.user.role}' is not allowed to access this route. Required roles: ${roles.join(', ')}`,
       });
     }
-    return next();
+    next();
   };
 };
 
