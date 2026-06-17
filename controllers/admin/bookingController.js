@@ -439,7 +439,6 @@ exports.adminCompleteBooking = async (req, res) => {
       message: 'Booking completed successfully by admin',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
       },
     });
@@ -507,7 +506,6 @@ exports.adminCancelBooking = async (req, res) => {
       message: 'Booking cancelled successfully by admin',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
         cancellation: booking.cancellation,
       },
@@ -609,7 +607,6 @@ exports.updateBookingStatus = async (req, res) => {
       message: `Booking status updated from ${previousStatus} to ${status}`,
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         previousStatus,
         newStatus: booking.status,
       },
@@ -624,7 +621,7 @@ exports.updateBookingStatus = async (req, res) => {
  */
 exports.searchBookings = async (req, res) => {
   try {
-    const { search, field = 'bookingId', page = 1, limit = 20 } = req.query;
+    const { search, field = 'id', page = 1, limit = 20 } = req.query;
 
     if (!search) {
       return res.status(400).json({
@@ -637,8 +634,8 @@ exports.searchBookings = async (req, res) => {
     let filter = {};
 
     // Search by different fields
-    if (field === 'bookingId') {
-      filter.bookingId = { $regex: search, $options: 'i' };
+    if (field === 'id') {
+      filter._id = { $regex: search, $options: 'i' };
     } else if (field === 'customerEmail') {
       const customer = await User.findOne({ email: { $regex: search, $options: 'i' } });
       filter.customer = customer?._id;

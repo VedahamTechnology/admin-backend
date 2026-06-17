@@ -62,7 +62,7 @@ class NotificationService {
         type: 'booking_created',
         title: '✅ Booking Request Sent',
         message: `Your booking request has been sent to ${populatedBooking.vendor.businessName || populatedBooking.vendor.firstName}`,
-        description: `Booking ID: ${populatedBooking.bookingId} | Awaiting confirmation`,
+        description: `Booking ID: ${populatedBooking._id.toString().slice(-6).toUpperCase()} | Awaiting confirmation`,
         relatedData: {
           bookingId: populatedBooking._id,
           vendorId: populatedBooking.vendor._id,
@@ -83,7 +83,7 @@ class NotificationService {
           recipientRole: 'admin',
           type: 'booking_created',
           title: '📊 New Booking Created',
-          message: `Booking ${populatedBooking.bookingId} - ${populatedBooking.customer.firstName} → ${populatedBooking.vendor.businessName}`,
+          message: `New Booking - ${populatedBooking.customer.firstName} → ${populatedBooking.vendor.businessName}`,
           description: `Amount: ₹${populatedBooking.pricing.totalAmount}`,
           relatedData: {
             bookingId: populatedBooking._id,
@@ -344,7 +344,7 @@ class NotificationService {
       if (!booking) return;
 
       let message = `${booking.vendor.businessName || booking.vendor.firstName} has confirmed your booking`;
-      let description = `Booking ID: ${booking.bookingId} | Date: ${new Date(booking.bookingDate).toLocaleDateString()}`;
+      let description = `Booking ID: ${booking._id.toString().slice(-6).toUpperCase()} | Date: ${new Date(booking.bookingDate).toLocaleDateString()}`;
 
       if (booking.worker) {
         description += ` | Worker: ${booking.worker.firstName} ${booking.worker.lastName}`;
@@ -379,7 +379,7 @@ class NotificationService {
           recipientRole: 'admin',
           type: 'booking_confirmed',
           title: '✅ Booking Confirmed',
-          message: `Booking ${booking.bookingId} confirmed by vendor`,
+          message: `Booking confirmed by vendor`,
           description: `Vendor: ${booking.vendor.businessName} | Customer: ${booking.customer.firstName}`,
           relatedData: {
             bookingId: booking._id,
@@ -470,7 +470,7 @@ class NotificationService {
         type: 'booking_completed',
         title: '🎊 Service Completed!',
         message: `Your service for ${booking.service.name} has been marked as completed.`,
-        description: `Booking ID: ${booking.bookingId} | Thank you for using Homster!`,
+        description: `Booking ID: ${booking._id.toString().slice(-6).toUpperCase()} | Thank you for using Homster!`,
         relatedData: {
           bookingId: booking._id,
           vendorId: booking.vendor._id,
@@ -488,7 +488,7 @@ class NotificationService {
         recipientRole: 'vendor',
         type: 'booking_completed',
         title: '💰 Payment Received & Booking Completed',
-        message: `Booking ${booking.bookingId} has been successfully completed and paid.`,
+        message: `Booking has been successfully completed and paid.`,
         description: `Customer: ${booking.customer.firstName} | Service: ${booking.service.name}`,
         relatedData: {
           bookingId: booking._id,
@@ -530,7 +530,7 @@ class NotificationService {
         type: 'work_done',
         title: '🛠️ Service Work Finished',
         message: `Work for ${booking.service.name} is finished. Please proceed to payment.`,
-        description: `Booking ID: ${booking.bookingId} | Amount: ₹${booking.pricing.totalAmount}`,
+        description: `Booking ID: ${booking._id.toString().slice(-6).toUpperCase()} | Amount: ₹${booking.pricing.totalAmount}`,
         relatedData: {
           bookingId: booking._id,
           amount: booking.pricing.totalAmount,
@@ -593,7 +593,7 @@ class NotificationService {
           recipientRole: 'admin',
           type: 'booking_cancelled',
           title: '❌ Booking Rejected',
-          message: `Booking ${booking.bookingId} rejected by vendor`,
+          message: `Booking rejected by vendor`,
           description: `Reason: ${rejectionReason}`,
           relatedData: {
             bookingId: booking._id,

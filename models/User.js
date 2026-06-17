@@ -3,8 +3,6 @@ const bcrypt   = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
 
-  userId:    { type: String, unique: true },
-
   firstName: { type: String, required: true, trim: true },
   lastName:  { type: String, required: false, trim: true },
   email:     { type: String, required: true, unique: true, lowercase: true },
@@ -104,22 +102,6 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function() {
   try {
-    if (!this.userId) {
-      const Counter = require('./Counter');
-      const prefix = this.role === 'customer' ? 'UC'
-                   : this.role === 'vendor'   ? 'UV'
-                   : this.role === 'worker'   ? 'UW'
-                   : 'UA';
-
-      const counter = await Counter.findByIdAndUpdate(
-        `user_${this.role}`,
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-      );
-
-      this.userId  = `${prefix}-${String(counter.seq).padStart(5, '0')}`;
-    }
-
     if (this.isModified('password')) {
       const salt    = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);

@@ -37,15 +37,15 @@ exports.exportBookingsCSV = async (req, res) => {
     }
 
     const bookings = await Booking.find(filter)
-      .populate('customer', 'firstName lastName email phone userId')
-      .populate('vendor', 'firstName lastName businessName email phone userId')
+      .populate('customer', 'firstName lastName email phone')
+      .populate('vendor', 'firstName lastName businessName email phone')
       .populate('service', 'name')
       .populate('category', 'name')
       .lean();
 
     // Transform bookings for CSV
     const csvData = bookings.map((booking) => ({
-      'Booking ID': booking.bookingId,
+      'Booking ID': booking._id,
       'Customer Name': `${booking.customer?.firstName} ${booking.customer?.lastName}`,
       'Customer Email': booking.customer?.email,
       'Customer Phone': booking.customer?.phone,
@@ -144,7 +144,7 @@ exports.exportUsersCSV = async (req, res) => {
 
     // Transform users for CSV
     const csvData = users.map((user) => ({
-      'User ID': user.userId,
+      'User ID': user._id,
       'Name': `${user.firstName} ${user.lastName || ''}`,
       'Email': user.email,
       'Phone': user.phone,
@@ -259,7 +259,7 @@ exports.exportServicesCSV = async (req, res) => {
 
     // Transform services for CSV
     const csvData = services.map((service) => ({
-      'Service ID': service.serviceId,
+      'Service ID': service._id,
       'Service Name': service.name,
       'Category': service.category?.name,
       'Brand': service.brand?.name || 'N/A',

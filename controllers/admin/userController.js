@@ -75,7 +75,6 @@ exports.blockUser = async (req, res) => {
       message: 'User blocked successfully',
       user: {
         id:       user._id,
-        userId:   user.userId,
         email:    user.email,
         isBanned: user.isBanned,
       },
@@ -106,7 +105,6 @@ exports.unblockUser = async (req, res) => {
       message: 'User unblocked successfully',
       user: {
         id:       user._id,
-        userId:   user.userId,
         email:    user.email,
         isBanned: user.isBanned,
       },
@@ -152,7 +150,6 @@ exports.searchUsers = async (req, res) => {
         { lastName:  { $regex: query, $options: 'i' } },
         { email:     { $regex: query, $options: 'i' } },
         { phone:     { $regex: query, $options: 'i' } },
-        { userId:    { $regex: query, $options: 'i' } },
         { gender:    { $regex: query, $options: 'i' } },
         { 'location.city':    { $regex: query, $options: 'i' } },
         { 'location.pincode': { $regex: query, $options: 'i' } },

@@ -264,7 +264,6 @@ exports.getMySelectedServices = async (req, res) => {
       const vendorData = service.vendors.find(v => v.vendorId.toString() === vendorId.toString());
       return {
         _id: service._id,
-        serviceId: service.serviceId,
         name: service.name,
         slug: service.slug,
         description: service.description,

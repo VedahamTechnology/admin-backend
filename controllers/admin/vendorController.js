@@ -67,7 +67,6 @@ exports.approveVendor = async (req, res) => {
       message: 'Vendor approved successfully',
       vendor: {
         id:                 vendor._id,
-        userId:             vendor.userId,
         firstName:          vendor.firstName,
         lastName:           vendor.lastName,
         email:              vendor.email,
@@ -136,7 +135,6 @@ exports.blockVendor = async (req, res) => {
       message: 'Vendor blocked successfully',
       vendor: {
         id:       vendor._id,
-        userId:   vendor.userId,
         email:    vendor.email,
         isBanned: vendor.isBanned,
       },
@@ -167,7 +165,6 @@ exports.unblockVendor = async (req, res) => {
       message: 'Vendor unblocked successfully',
       vendor: {
         id:       vendor._id,
-        userId:   vendor.userId,
         email:    vendor.email,
         isBanned: vendor.isBanned,
       },
@@ -213,7 +210,6 @@ exports.searchVendors = async (req, res) => {
         { lastName:                      { $regex: query, $options: 'i' } },
         { email:                         { $regex: query, $options: 'i' } },
         { phone:                         { $regex: query, $options: 'i' } },
-        { userId:                        { $regex: query, $options: 'i' } },
         { 'vendor.businessName':         { $regex: query, $options: 'i' } },
         { 'vendor.ownerName':            { $regex: query, $options: 'i' } },
         { 'vendor.skills':               { $regex: query, $options: 'i' } },

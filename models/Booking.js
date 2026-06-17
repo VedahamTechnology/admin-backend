@@ -6,16 +6,6 @@ const bookingSchema = new mongoose.Schema({
    * BOOKING IDENTIFICATION
    * bookingId is atomically generated using a Counter collection to prevent race conditions
    */
-  bookingId: {
-    type: String,
-    unique: true,
-    sparse: true,
-    required: true,
-  },
-
-  /**
-   * CORE REFERENCES
-   */
   customer: {
     type:     mongoose.Schema.Types.ObjectId,
     ref:      'User',
@@ -249,27 +239,12 @@ const bookingSchema = new mongoose.Schema({
 
 /**
  * PRE-SAVE MIDDLEWARE
- * 1. Atomically generate unique bookingId using Counter collection (prevents race conditions)
- * 2. Validate pricing calculations
- * 3. Set TTL expiry for pending bookings
- * 4. Hash OTPs if provided
+ * 1. Validate pricing calculations
+ * 2. Set TTL expiry for pending bookings
+ * 3. Hash OTPs if provided
  */
 bookingSchema.pre('save', async function(next) {
   try {
-    // Generate unique bookingId using atomic counter
-    if (!this.bookingId) {
-      const Counter = require('./Counter');
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      
-      const counter = await Counter.findByIdAndUpdate(
-        'booking',
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-      );
-      
-      this.bookingId = `BK-${date}-${String(counter.seq).padStart(5, '0')}`;
-    }
-
     // Validate pricing: totalAmount should equal basePrice + platformFee + tax - discount
     if (this.pricing) {
       const expected = this.pricing.basePrice + (this.pricing.platformFee || 0) + (this.pricing.tax || 0) - (this.pricing.discount || 0);

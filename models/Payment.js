@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
-  paymentId: { type: String, unique: true },
-
   booking: {
     type:     mongoose.Schema.Types.ObjectId,
     ref:      'Booking',
@@ -56,13 +54,6 @@ const paymentSchema = new mongoose.Schema({
   paidAt: Date,
 
 }, { timestamps: true });
-
-paymentSchema.pre('save', async function() {
-  if (!this.paymentId) {
-    const count = await mongoose.model('Payment').countDocuments();
-    this.paymentId = `PAY-${String(count + 1).padStart(6, '0')}`;
-  }
-});
 
 paymentSchema.index({ booking: 1 });
 paymentSchema.index({ customer: 1 });

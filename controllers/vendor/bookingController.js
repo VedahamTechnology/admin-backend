@@ -119,7 +119,6 @@ exports.acceptBooking = async (req, res) => {
       message: 'Booking confirmed successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
         vendorAcceptedAt: booking.vendorAcceptedAt,
       },
@@ -190,7 +189,6 @@ exports.rejectBooking = async (req, res) => {
       message: 'Booking rejected successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
         cancellation: booking.cancellation,
       },
@@ -249,7 +247,6 @@ exports.completeBooking = async (req, res) => {
       message: 'Booking marked as completed successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
         completedAt: booking.completedAt,
         customerEmail: booking.customer.email,
@@ -317,7 +314,6 @@ exports.cancelBooking = async (req, res) => {
       message: 'Booking cancelled successfully. Customer and admin have been notified.',
       booking: {
         id: booking._id,
-        bookingId: booking.bookingId,
         status: booking.status,
         cancellation: booking.cancellation,
       },
@@ -373,7 +369,7 @@ exports.searchBookings = async (req, res) => {
     const bookings = await Booking.find({
       vendor: req.user._id,
       $or: [
-        { bookingId: { $regex: search, $options: 'i' } },
+        { _id: { $regex: search, $options: 'i' } },
         { 'serviceAddress.city': { $regex: search, $options: 'i' } },
       ],
     })
@@ -385,7 +381,7 @@ exports.searchBookings = async (req, res) => {
     const total = await Booking.countDocuments({
       vendor: req.user._id,
       $or: [
-        { bookingId: { $regex: search, $options: 'i' } },
+        { _id: { $regex: search, $options: 'i' } },
         { 'serviceAddress.city': { $regex: search, $options: 'i' } },
       ],
     });

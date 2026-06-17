@@ -424,7 +424,7 @@ exports.searchBookings = async (req, res) => {
 
     if (query) {
       filter.$or = [
-        { bookingId: { $regex: query, $options: 'i' } },
+        { _id: { $regex: query, $options: 'i' } },
       ];
     }
 

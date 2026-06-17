@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const brandSchema = new mongoose.Schema({
-  brandId:     { type: String, unique: true },
   name:        { type: String, required: true, trim: true }, // unique within category
   slug:        { type: String, unique: true, lowercase: true },
   description: { type: String },
@@ -33,10 +32,6 @@ const brandSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 brandSchema.pre('save', async function() {
-  if (!this.brandId) {
-    const count = await mongoose.model('Brand').countDocuments();
-    this.brandId = `BRD-${String(count + 1).padStart(3, '0')}`;
-  }
   if (!this.slug) {
     this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
   }

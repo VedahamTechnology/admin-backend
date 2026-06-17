@@ -78,7 +78,6 @@ exports.registerCustomer = async (req, res) => {
       accessToken,
       user: {
         id:        customer._id,
-        userId:    customer.userId,
         firstName: customer.firstName,
         lastName:  customer.lastName,
         email:     customer.email,
@@ -144,7 +143,6 @@ exports.registerVendor = async (req, res) => {
       accessToken,
       user: {
         id:                 vendor._id,
-        userId:             vendor.userId,
         firstName:          vendor.firstName,
         lastName:           vendor.lastName,
         email:              vendor.email,
@@ -224,7 +222,6 @@ exports.login = async (req, res) => {
       accessToken,
       user: {
         id:        user._id,
-        userId:    user.userId,
         firstName: user.firstName,
         lastName:  user.lastName,
         email:     user.email,

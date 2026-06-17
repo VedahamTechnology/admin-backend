@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const serviceSchema = new mongoose.Schema({
-  serviceId:   { type: String, unique: true },
   name:        { type: String, required: true, trim: true },
   slug:        { type: String, unique: true, lowercase: true },
   description: { type: String, required: true },
@@ -83,15 +82,6 @@ const serviceSchema = new mongoose.Schema({
 
 serviceSchema.pre('save', async function(next) {
   try {
-    if (!this.serviceId) {
-      const Counter = require('./Counter');
-      const counter = await Counter.findByIdAndUpdate(
-        'service',
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-      );
-      this.serviceId = `SRV-${String(counter.seq).padStart(4, '0')}`;
-    }
     if (!this.slug) {
       this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
     }
