@@ -47,11 +47,10 @@ exports.createBooking = async (req, res) => {
     }
 
     // Check if vendor offers this service
-    const vendorService = service.vendors.find(v => v.vendorId.toString() === vendorId);
-    if (!vendorService || !vendorService.isAvailable) {
+    if (service.vendor.toString() !== vendorId) {
       return res.status(400).json({
         success: false,
-        message: 'This vendor does not offer this service or is not available',
+        message: 'This service does not belong to the specified vendor',
       });
     }
 
@@ -93,7 +92,7 @@ exports.createBooking = async (req, res) => {
     }
 
     // Calculate pricing with proper breakdown
-    const basePrice = vendorService.vendorPrice || service.basePrice;
+    const basePrice = service.basePrice;
     const platformFeePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE) || 15;
     const platformFee = (basePrice * (platformFeePercentage / 100)) || 0;
     const tax = (basePrice * (service.taxPercentage || 0)) / 100;

@@ -243,40 +243,34 @@ const bookingSchema = new mongoose.Schema({
  * 2. Set TTL expiry for pending bookings
  * 3. Hash OTPs if provided
  */
-bookingSchema.pre('save', async function(next) {
-  try {
-    // Validate pricing: totalAmount should equal basePrice + platformFee + tax - discount
-    if (this.pricing) {
-      const expected = this.pricing.basePrice + (this.pricing.platformFee || 0) + (this.pricing.tax || 0) - (this.pricing.discount || 0);
-      const tolerance = 0.01;  // Account for floating-point precision
-      
-      if (Math.abs(this.pricing.totalAmount - expected) > tolerance) {
-        throw new Error(
-          `Pricing mismatch: totalAmount (${this.pricing.totalAmount}) != basePrice (${this.pricing.basePrice}) + platformFee (${this.pricing.platformFee || 0}) + tax (${this.pricing.tax || 0}) - discount (${this.pricing.discount || 0})`
-        );
-      }
-    }
+bookingSchema.pre('save', async function() {
+  // Validate pricing: totalAmount should equal basePrice + platformFee + tax - discount
+  if (this.pricing) {
+    const expected = this.pricing.basePrice + (this.pricing.platformFee || 0) + (this.pricing.tax || 0) - (this.pricing.discount || 0);
+    const tolerance = 0.01;  // Account for floating-point precision
 
-    // Set TTL expiry for pending bookings (1 hour from now)
-    if (this.status === 'pending' && !this.expiresAt) {
-      const expiresIn = 60 * 60 * 1000;  // 1 hour
-      this.expiresAt = new Date(Date.now() + expiresIn);
+    if (Math.abs(this.pricing.totalAmount - expected) > tolerance) {
+      throw new Error(
+        `Pricing mismatch: totalAmount (${this.pricing.totalAmount}) != basePrice (${this.pricing.basePrice}) + platformFee (${this.pricing.platformFee || 0}) + tax (${this.pricing.tax || 0}) - discount (${this.pricing.discount || 0})`
+      );
     }
+  }
 
-    // Hash OTPs if provided and not already hashed
-    if (this.otp && this.otp.startOtp && !this.otp.startOtp.startsWith('$2')) {
-      const salt = await bcrypt.genSalt(10);
-      this.otp.startOtp = await bcrypt.hash(this.otp.startOtp, salt);
-    }
+  // Set TTL expiry for pending bookings (1 hour from now)
+  if (this.status === 'pending' && !this.expiresAt) {
+    const expiresIn = 60 * 60 * 1000;  // 1 hour
+    this.expiresAt = new Date(Date.now() + expiresIn);
+  }
 
-    if (this.otp && this.otp.endOtp && !this.otp.endOtp.startsWith('$2')) {
-      const salt = await bcrypt.genSalt(10);
-      this.otp.endOtp = await bcrypt.hash(this.otp.endOtp, salt);
-    }
+  // Hash OTPs if provided and not already hashed
+  if (this.otp && this.otp.startOtp && !this.otp.startOtp.startsWith('$2')) {
+    const salt = await bcrypt.genSalt(10);
+    this.otp.startOtp = await bcrypt.hash(this.otp.startOtp, salt);
+  }
 
-    next();
-  } catch (error) {
-    next(error);
+  if (this.otp && this.otp.endOtp && !this.otp.endOtp.startsWith('$2')) {
+    const salt = await bcrypt.genSalt(10);
+    this.otp.endOtp = await bcrypt.hash(this.otp.endOtp, salt);
   }
 });
 

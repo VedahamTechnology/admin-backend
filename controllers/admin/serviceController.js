@@ -26,7 +26,7 @@ exports.getPendingServices = async (req, res) => {
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate('createdByVendor', 'firstName lastName businessName email phone')
-      .populate('vendors.vendorId', 'firstName lastName businessName')
+      .populate('vendor', 'firstName lastName businessName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -251,7 +251,7 @@ exports.createService = async (req, res) => {
       includes: includes || [],
       excludes: excludes || [],
       displayOrder: displayOrder || 0,
-      vendors: [], // No vendors initially, vendors will select this service
+      vendor: req.user._id, // Assign to admin or require a vendorId in body
     });
 
     await service.populate('category', 'name');
@@ -299,7 +299,7 @@ exports.getAllServices = async (req, res) => {
       .populate('category', 'name')
       .populate('brand', 'name')
       .populate('createdByVendor', 'firstName lastName businessName')
-      .populate('vendors.vendorId', 'firstName lastName businessName')
+      .populate('vendor', 'firstName lastName businessName')
       .sort({ displayOrder: 1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -326,7 +326,7 @@ exports.getServiceById = async (req, res) => {
     const service = await Service.findById(req.params.id)
       .populate('category', 'name')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName email');
+      .populate('vendor', 'firstName lastName businessName email');
 
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
@@ -410,7 +410,7 @@ exports.updateService = async (req, res) => {
     if (service.brand) {
       await service.populate('brand', 'name');
     }
-    await service.populate('vendors.vendorId', 'firstName lastName businessName');
+    await service.populate('vendor', 'firstName lastName businessName');
 
     res.status(200).json({
       success: true,
@@ -431,14 +431,6 @@ exports.deleteService = async (req, res) => {
 
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-
-    // Check if service has active vendor associations
-    if (service.vendors && service.vendors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete service. It has ${service.vendors.length} vendor(s) offering it. Remove vendors first.`,
-      });
     }
 
     await Service.findByIdAndDelete(req.params.id);
@@ -505,7 +497,7 @@ exports.getServicesByCategory = async (req, res) => {
     const services = await Service.find(filter)
       .populate('category', 'name')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName')
+      .populate('vendor', 'firstName lastName businessName')
       .sort({ displayOrder: 1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));

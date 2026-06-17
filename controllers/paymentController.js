@@ -37,7 +37,7 @@ exports.createOrder = async (req, res) => {
     const options = {
       amount: Math.round(booking.pricing.totalAmount * 100), // amount in paise
       currency: 'INR',
-      receipt: `receipt_${booking.bookingId}`,
+      receipt: `receipt_${booking._id}`,
       notes: {
         bookingId: booking._id.toString(),
         customerName: req.user.firstName + ' ' + (req.user.lastName || ''),

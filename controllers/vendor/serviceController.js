@@ -48,13 +48,7 @@ exports.createService = async (req, res) => {
       features: features || [],
       includes: includes || [],
       excludes: excludes || [],
-      vendors: [
-        {
-          vendorId: req.user._id,
-          vendorPrice: basePrice,
-          isAvailable: true,
-        },
-      ],
+      vendor: req.user._id,
       // Set initial approval status
       isApproved: false,
       approvalStatus: 'pending',
@@ -152,7 +146,7 @@ exports.getServiceById = async (req, res) => {
     const service = await Service.findById(req.params.id)
       .populate('category')
       .populate('brand')
-      .populate('vendors.vendorId', 'firstName lastName email phone businessName');
+      .populate('vendor', 'firstName lastName email phone businessName');
 
     if (!service) {
       return res.status(404).json({
@@ -162,11 +156,7 @@ exports.getServiceById = async (req, res) => {
     }
 
     // Check if requesting vendor owns this service
-    const vendorService = service.vendors.find(
-      (v) => v.vendorId._id.toString() === req.user._id.toString()
-    );
-
-    if (!vendorService) {
+    if (service.vendor._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this service',
@@ -212,11 +202,7 @@ exports.updateService = async (req, res) => {
     }
 
     // Check if vendor owns this service
-    const vendorService = service.vendors.find(
-      (v) => v.vendorId.toString() === req.user._id.toString()
-    );
-
-    if (!vendorService) {
+    if (service.vendor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to update this service',
@@ -235,16 +221,6 @@ exports.updateService = async (req, res) => {
     if (includes) service.includes = includes;
     if (excludes) service.excludes = excludes;
     if (isActive !== undefined) service.isActive = isActive;
-
-    // Update vendor-specific price if needed
-    if (basePrice) {
-      const vendorIndex = service.vendors.findIndex(
-        (v) => v.vendorId.toString() === req.user._id.toString()
-      );
-      if (vendorIndex !== -1) {
-        service.vendors[vendorIndex].vendorPrice = basePrice;
-      }
-    }
 
     await service.save();
     await service.populate('category', 'name');
@@ -275,28 +251,16 @@ exports.deleteService = async (req, res) => {
     }
 
     // Check if vendor owns this service
-    const vendorService = service.vendors.find(
-      (v) => v.vendorId.toString() === req.user._id.toString()
-    );
-
-    if (!vendorService) {
+    if (service.vendor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to delete this service',
       });
     }
 
-    // If multiple vendors have this service, just remove this vendor
-    if (service.vendors.length > 1) {
-      service.vendors = service.vendors.filter(
-        (v) => v.vendorId.toString() !== req.user._id.toString()
-      );
-      await service.save();
-    } else {
-      // If this is the only vendor, soft delete the service
-      service.isActive = false;
-      await service.save();
-    }
+    // Soft delete the service
+    service.isActive = false;
+    await service.save();
 
     res.status(200).json({
       success: true,
@@ -332,19 +296,15 @@ exports.updateServiceAvailability = async (req, res) => {
     }
 
     // Check if vendor owns this service
-    const vendorIndex = service.vendors.findIndex(
-      (v) => v.vendorId.toString() === req.user._id.toString()
-    );
-
-    if (vendorIndex === -1) {
+    if (service.vendor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to update this service',
       });
     }
 
-    // Update availability for this vendor
-    service.vendors[vendorIndex].isAvailable = isAvailable;
+    // Update availability
+    service.isActive = isAvailable;
     await service.save();
 
     res.status(200).json({
@@ -378,7 +338,7 @@ exports.searchServices = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const services = await Service.find({
-      'vendors.vendorId': req.user._id,
+      vendor: req.user._id,
       $or: [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
@@ -390,7 +350,7 @@ exports.searchServices = async (req, res) => {
       .limit(Number(limit));
 
     const total = await Service.countDocuments({
-      'vendors.vendorId': req.user._id,
+      vendor: req.user._id,
       $or: [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
@@ -416,7 +376,7 @@ exports.searchServices = async (req, res) => {
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true })
-      .select('_id categoryId name slug image description totalServices avgRating')
+      .select('_id name slug image description totalServices avgRating')
       .sort({ displayOrder: 1 })
       .lean();
 
@@ -497,7 +457,7 @@ exports.getServicesByCategory = async (req, res) => {
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .populate('vendor', 'firstName lastName businessName profileImage rating')
       .sort(sortObj)
       .skip(skip)
       .limit(limitNum)

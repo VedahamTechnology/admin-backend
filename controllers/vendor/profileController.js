@@ -84,7 +84,6 @@ exports.updateProfile = async (req, res) => {
       message: 'Profile updated successfully',
       vendor: {
         id: vendor._id,
-        userId: vendor.userId,
         firstName: vendor.firstName,
         lastName: vendor.lastName,
         email: vendor.email,
@@ -198,8 +197,8 @@ exports.selectService = async (req, res) => {
       });
     }
 
-    // Check if vendor already has this service
-    const vendorServiceExists = service.vendors.some(v => v.vendorId.toString() === vendorId.toString());
+    // Check if vendor already has this service (In the new model, this check might change if we allow duplicate service names for different vendors)
+    const vendorServiceExists = await Service.findOne({ _id: serviceId, vendor: vendorId });
 
     if (vendorServiceExists) {
       return res.status(400).json({
@@ -208,14 +207,14 @@ exports.selectService = async (req, res) => {
       });
     }
 
-    // Add vendor to service with their custom pricing
-    service.vendors.push({
-      vendorId,
-      vendorPrice,
-    });
+    // Update the service to assign it to this vendor and set price
+    // Note: If services are shared, this logic would overwrite.
+    // If the goal is 1 vendor per service, we update the existing service's vendor field.
+    service.vendor = vendorId;
+    service.basePrice = vendorPrice;
 
     await service.save();
-    await service.populate('vendors.vendorId', 'firstName lastName businessName');
+    await service.populate('vendor', 'firstName lastName businessName');
 
     res.status(200).json({
       success: true,
@@ -243,7 +242,7 @@ exports.getMySelectedServices = async (req, res) => {
     const vendorId = req.user._id;
 
     let filter = {
-      'vendors.vendorId': vendorId,
+      vendor: vendorId,
     };
 
     if (categoryId) {
@@ -259,9 +258,8 @@ exports.getMySelectedServices = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
-    // Transform response to show vendor-specific pricing
+    // Transform response
     const vendorServices = services.map(service => {
-      const vendorData = service.vendors.find(v => v.vendorId.toString() === vendorId.toString());
       return {
         _id: service._id,
         name: service.name,
@@ -271,8 +269,8 @@ exports.getMySelectedServices = async (req, res) => {
         brand: service.brand,
         basePrice: service.basePrice,
         discountedPrice: service.discountedPrice,
-        vendorPrice: vendorData?.vendorPrice,
-        isAvailable: vendorData?.isAvailable,
+        vendorPrice: service.basePrice,
+        isAvailable: service.isActive,
         estimatedDuration: service.estimatedDuration,
         features: service.features,
         includes: service.includes,
@@ -322,22 +320,20 @@ exports.updateMyServicePricing = async (req, res) => {
       });
     }
 
-    // Find vendor in service
-    const vendorIndex = service.vendors.findIndex(v => v.vendorId.toString() === vendorId.toString());
-
-    if (vendorIndex === -1) {
+    // Check if vendor owns this service
+    if (service.vendor.toString() !== vendorId.toString()) {
       return res.status(400).json({
         success: false,
-        message: 'You have not selected this service',
+        message: 'You are not the vendor for this service',
       });
     }
 
-    // Update vendor's pricing/availability
+    // Update pricing/availability
     if (vendorPrice !== undefined) {
-      service.vendors[vendorIndex].vendorPrice = vendorPrice;
+      service.basePrice = vendorPrice;
     }
     if (isAvailable !== undefined) {
-      service.vendors[vendorIndex].isAvailable = isAvailable;
+      service.isActive = isAvailable;
     }
 
     await service.save();
@@ -349,8 +345,8 @@ exports.updateMyServicePricing = async (req, res) => {
         _id: service._id,
         name: service.name,
         basePrice: service.basePrice,
-        vendorPrice: service.vendors[vendorIndex].vendorPrice,
-        isAvailable: service.vendors[vendorIndex].isAvailable,
+        vendorPrice: service.basePrice,
+        isAvailable: service.isActive,
       },
     });
   } catch (error) {
@@ -373,11 +369,7 @@ exports.removeMyService = async (req, res) => {
       });
     }
 
-    const service = await Service.findByIdAndUpdate(
-      serviceId,
-      { $pull: { vendors: { vendorId } } },
-      { new: true }
-    ).populate('category', 'name');
+    const service = await Service.findById(serviceId);
 
     if (!service) {
       return res.status(404).json({
@@ -385,6 +377,22 @@ exports.removeMyService = async (req, res) => {
         message: 'Service not found',
       });
     }
+
+    // Check if vendor owns this service
+    if (service.vendor.toString() !== vendorId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to remove this service',
+      });
+    }
+
+    // Option 1: Just set vendor to null (unassign)
+    // service.vendor = null;
+    // await service.save();
+
+    // Option 2: Soft delete or deactivate
+    service.isActive = false;
+    await service.save();
 
     res.status(200).json({
       success: true,
@@ -480,7 +488,7 @@ exports.getStats = async (req, res) => {
     const Booking = require('../../models/Booking');
 
     const totalServices = await Service.countDocuments({
-      'vendors.vendorId': req.user._id,
+      vendor: req.user._id,
       isActive: true,
     });
 

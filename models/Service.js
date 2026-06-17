@@ -35,11 +35,11 @@ const serviceSchema = new mongoose.Schema({
   excludes: [{ type: String }],
 
   // Vendor Information
-  vendors: [{
-    vendorId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    vendorPrice: { type: Number },
-    isAvailable: { type: Boolean, default: true },
-  }],
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
 
   // Ratings
   ratings: {
@@ -80,14 +80,9 @@ const serviceSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-serviceSchema.pre('save', async function(next) {
-  try {
-    if (!this.slug) {
-      this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
-    }
-    next();
-  } catch (error) {
-    next(error);
+serviceSchema.pre('save', async function() {
+  if (!this.slug) {
+    this.slug = this.name.toLowerCase().replace(/\s+/g, '-');
   }
 });
 

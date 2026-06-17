@@ -67,7 +67,7 @@ exports.getAllServices = async (req, res) => {
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .populate('vendor', 'firstName lastName businessName profileImage rating')
       .sort(sortObj)
       .skip(skip)
       .limit(limitNum)
@@ -186,7 +186,7 @@ exports.getServicesByCategory = async (req, res) => {
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .populate('vendor', 'firstName lastName businessName profileImage rating')
       .sort(sortObj)
       .skip(skip)
       .limit(limitNum)
@@ -230,7 +230,7 @@ exports.getServiceDetails = async (req, res) => {
     const service = await Service.findById(serviceId)
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating email phone')
+      .populate('vendor', 'firstName lastName businessName profileImage rating email phone')
       .lean();
 
     if (!service) {
@@ -298,7 +298,7 @@ exports.searchServices = async (req, res) => {
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .populate('vendor', 'firstName lastName businessName profileImage rating')
       .sort({ 'ratings.average': -1 })
       .skip(skip)
       .limit(limitNum)
@@ -338,7 +338,7 @@ exports.getTopRatedServices = async (req, res) => {
     const services = await Service.find({ isActive: true, approvalStatus: 'approved' })
       .populate('category', 'name slug')
       .populate('brand', 'name')
-      .populate('vendors.vendorId', 'firstName lastName businessName profileImage rating')
+      .populate('vendor', 'firstName lastName businessName profileImage rating')
       .sort({ 'ratings.average': -1, 'ratings.count': -1 })
       .limit(limitNum)
       .lean();

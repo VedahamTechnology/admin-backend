@@ -52,7 +52,6 @@ exports.addWorker = async (req, res) => {
       message: 'Worker add request sent to admin for approval',
       worker: {
         id: worker._id,
-        userId: worker.userId,
         fullName: `${worker.firstName} ${worker.lastName}`,
         status: worker.worker.verificationStatus
       }

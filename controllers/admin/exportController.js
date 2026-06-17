@@ -267,7 +267,10 @@ exports.exportServicesCSV = async (req, res) => {
       'Discounted Price': service.discountedPrice,
       'Estimated Duration': service.estimatedDuration,
       'Duration Unit': service.durationUnit,
-      'Vendor Count': service.vendors?.length || 0,
+      'Vendor': service.vendor
+        ? `${service.vendor.firstName} ${service.vendor.lastName || ''}`
+        : 'N/A',
+      'Vendor Business': service.vendor?.businessName || 'N/A',
       'Rating': service.ratings?.average || 'N/A',
       'Rating Count': service.ratings?.count || 0,
       'Is Active': service.isActive ? 'Yes' : 'No',
@@ -296,7 +299,8 @@ exports.exportServicesCSV = async (req, res) => {
         'Discounted Price',
         'Estimated Duration',
         'Duration Unit',
-        'Vendor Count',
+        'Vendor',
+        'Vendor Business',
         'Rating',
         'Rating Count',
         'Is Active',
