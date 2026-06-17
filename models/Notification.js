@@ -37,6 +37,12 @@ const notificationSchema = new mongoose.Schema({
       'booking_rescheduled',  // Both: Booking rescheduled
       'otp_sent',             // Vendor: OTP sent for verification
       'message',              // Generic message
+      'service_pending_approval',
+      'service_approved',
+      'service_rejected',
+      'worker_assigned',
+      'work_done',
+      'booking_completed',
     ],
     required: true,
     index: true,
