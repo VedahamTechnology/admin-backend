@@ -456,41 +456,40 @@ class NotificationService {
       const User = require('../models/User');
 
       const booking = await Booking.findById(bookingId)
-        .populate('vendor', '_id firstName lastName email businessName')
+        .populate('vendor', '_id firstName lastName businessName')
         .populate('customer', '_id firstName lastName email')
         .populate('service', 'name')
         .lean();
 
       if (!booking) return;
 
-      // Notify customer that service is completed
+      // Notify customer
       const customerNotification = await Notification.create({
         recipient: booking.customer._id,
         recipientRole: 'customer',
-        type: 'service_completed',
-        title: '✅ Service Completed',
-        message: `Your ${booking.service.name} service has been completed`,
-        description: `Booking ID: ${booking.bookingId} | Please rate your experience`,
+        type: 'booking_completed',
+        title: '🎊 Service Completed!',
+        message: `Your service for ${booking.service.name} has been marked as completed.`,
+        description: `Booking ID: ${booking.bookingId} | Thank you for using Homster!`,
         relatedData: {
           bookingId: booking._id,
           vendorId: booking.vendor._id,
-          serviceId: booking.service._id,
         },
         metadata: {
           action: `/customer/bookings/${bookingId}`,
-          actionLabel: 'Rate Service',
-          priority: 'normal',
+          actionLabel: 'Leave a Review',
+          priority: 'high',
         },
       });
 
-      // Notify vendor that service is completed
+      // Notify vendor
       const vendorNotification = await Notification.create({
         recipient: booking.vendor._id,
         recipientRole: 'vendor',
-        type: 'service_completed',
-        title: '✅ Service Completed',
-        message: `Your service for ${booking.customer.firstName} has been marked as completed`,
-        description: `Booking ID: ${booking.bookingId}`,
+        type: 'booking_completed',
+        title: '💰 Payment Received & Booking Completed',
+        message: `Booking ${booking.bookingId} has been successfully completed and paid.`,
+        description: `Customer: ${booking.customer.firstName} | Service: ${booking.service.name}`,
         relatedData: {
           bookingId: booking._id,
           customerId: booking.customer._id,
@@ -502,33 +501,6 @@ class NotificationService {
         },
       });
 
-      // Notify admin about service completion
-      const adminUser = await User.findOne({ role: 'admin' });
-      if (adminUser) {
-        const adminNotification = await Notification.create({
-          recipient: adminUser._id,
-          recipientRole: 'admin',
-          type: 'service_completed',
-          title: '✅ Service Completed',
-          message: `Booking ${booking.bookingId} marked as completed`,
-          description: `Vendor: ${booking.vendor.businessName} | Amount: ₹${booking.pricing.totalAmount}`,
-          relatedData: {
-            bookingId: booking._id,
-            vendorId: booking.vendor._id,
-            customerId: booking.customer._id,
-          },
-          metadata: {
-            action: `/admin/bookings/${bookingId}`,
-            actionLabel: 'View Booking',
-            priority: 'normal',
-          },
-        });
-
-        if (io) {
-          await this.sendRealTimeNotification(io, adminUser._id.toString(), adminNotification);
-        }
-      }
-
       if (io) {
         await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
         await this.sendRealTimeNotification(io, booking.vendor._id.toString(), vendorNotification);
@@ -537,6 +509,46 @@ class NotificationService {
       return { customerNotification, vendorNotification };
     } catch (error) {
       console.error('Error in notifyBookingCompleted:', error);
+      throw error;
+    }
+  }
+
+  static async notifyWorkDone(bookingId, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+      const booking = await Booking.findById(bookingId)
+        .populate('customer', '_id firstName')
+        .populate('vendor', 'businessName firstName')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking) return;
+
+      const customerNotification = await Notification.create({
+        recipient: booking.customer._id,
+        recipientRole: 'customer',
+        type: 'work_done',
+        title: '🛠️ Service Work Finished',
+        message: `Work for ${booking.service.name} is finished. Please proceed to payment.`,
+        description: `Booking ID: ${booking.bookingId} | Amount: ₹${booking.pricing.totalAmount}`,
+        relatedData: {
+          bookingId: booking._id,
+          amount: booking.pricing.totalAmount,
+        },
+        metadata: {
+          action: `/customer/payments/${bookingId}`,
+          actionLabel: 'Pay Now',
+          priority: 'high',
+        },
+      });
+
+      if (io) {
+        await this.sendRealTimeNotification(io, booking.customer._id.toString(), customerNotification);
+      }
+
+      return customerNotification;
+    } catch (error) {
+      console.error('Error in notifyWorkDone:', error);
       throw error;
     }
   }

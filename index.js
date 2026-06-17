@@ -1,5 +1,6 @@
 const express      = require('express');
 const dotenv       = require('dotenv');
+dotenv.config();
 const cors         = require('cors');
 const helmet       = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -22,6 +23,7 @@ const vendorProfileRoutes = require('./routes/vendor/profileRoutes');
 const vendorWorkerRoutes = require('./routes/vendor/workerRoutes');
 const userServicesRoutes = require('./routes/user/servicesRoutes');
 const userBookingRoutes = require('./routes/user/bookingRoutes');
+const userPaymentRoutes = require('./routes/user/paymentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 dotenv.config();
 connectDB();
@@ -97,6 +99,7 @@ app.use('/api/vendor/profile', vendorProfileRoutes);
 app.use('/api/vendor/workers', vendorWorkerRoutes);
 app.use('/api/user/services', userServicesRoutes);
 app.use('/api/user/bookings', userBookingRoutes);
+app.use('/api/user/payments', userPaymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 app.use(errorHandler);

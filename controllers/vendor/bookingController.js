@@ -452,6 +452,19 @@ exports.submitProofOfWork = async (req, res) => {
 
     await booking.save();
 
+    // Send notifications
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      if (booking.status === 'completed') {
+        await NotificationService.notifyBookingCompleted(booking._id, io);
+      } else if (booking.status === 'work_done') {
+        await NotificationService.notifyWorkDone(booking._id, io);
+      }
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
+
     await booking.populate([
       { path: 'customer', select: 'firstName lastName email' },
       { path: 'vendor', select: 'firstName lastName email' },
@@ -520,6 +533,8 @@ exports.verifyStartOtp = async (req, res) => {
     booking.status = 'on_the_way';
     await booking.save();
 
+    // No special notification needed for arrival here, as it usually continues to in_progress soon
+
     await booking.populate([
       { path: 'customer', select: 'firstName lastName phone' },
       { path: 'vendor', select: 'firstName lastName phone' },
@@ -585,10 +600,31 @@ exports.verifyEndOtp = async (req, res) => {
 
     // Update booking
     booking.otp.endVerifiedAt = new Date();
-    booking.status = 'completed';
-    booking.payment.status = 'completed';
-    booking.payment.paidAt = new Date();
+
+    // If it's a cash payment, we can complete it immediately
+    // Otherwise, mark as work_done so customer can pay via API/Razorpay
+    if (booking.payment.method === 'cash') {
+      booking.status = 'completed';
+      booking.payment.status = 'completed';
+      booking.payment.paidAt = new Date();
+    } else {
+      booking.status = 'work_done';
+    }
+
     await booking.save();
+
+    // Send notifications
+    try {
+      const NotificationService = require('../../utils/notificationService');
+      const io = req.app.get('io');
+      if (booking.status === 'completed') {
+        await NotificationService.notifyBookingCompleted(booking._id, io);
+      } else if (booking.status === 'work_done') {
+        await NotificationService.notifyWorkDone(booking._id, io);
+      }
+    } catch (notificationError) {
+      console.warn('Notification sending failed (non-critical):', notificationError.message);
+    }
 
     await booking.populate([
       { path: 'customer', select: 'firstName lastName phone' },

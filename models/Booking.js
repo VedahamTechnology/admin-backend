@@ -140,6 +140,7 @@ const bookingSchema = new mongoose.Schema({
       index: true,
     },
     transactionId: String,
+    razorpayOrderId: String,
     paidAt: Date,
   },
 
@@ -148,7 +149,7 @@ const bookingSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'on_the_way', 'in_progress', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'on_the_way', 'in_progress', 'work_done', 'completed', 'cancelled'],
     default: 'pending',
     index: true,
   },
