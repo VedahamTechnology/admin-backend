@@ -1,144 +1,370 @@
-# Homster API Documentation
+# Internship Project Complete API Documentation (Homster)
 
-This document provides a comprehensive technical reference for the Homster platform API, featuring detailed request/response schemas, query parameters, and role-based permissions.
-
-## 🚀 Base URL
-`http://localhost:5000/api`
+Welcome to the definitive backend API documentation. Every single individual endpoint available across all route modules is explicitly detailed below with request bodies and response structures.
 
 ---
 
-## 🔐 Authentication (`/auth`)
+## 🔐 1. Authentication & Identity Subsystem (`/api/auth`)
 
 ### Register Customer
-`POST /auth/register/customer`
-- **Description:** Register a new customer account.
-- **Request Body:**
-  | Field | Type | Required | Description |
-  | :--- | :--- | :--- | :--- |
-  | firstName | String | Yes | User's first name |
-  | lastName | String | No | User's last name |
-  | email | String | Yes | Unique email address |
-  | phone | String | Yes | Unique phone number |
-  | password | String | Yes | Minimum 8 characters |
-  | gender | String | No | male, female, or other |
-- **Response (201):**
-  ```json
-  {
-    "success": true,
-    "accessToken": "JWT_TOKEN",
-    "user": { "id": "...", "userId": "UC-00001", "role": "customer", "email": "..." }
-  }
-  ```
+*   **POST** `/api/auth/register/customer`
+*   **Description:** Registers a new user with the `customer` role.
+*   **Request Body:**
+    ```json
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@example.com",
+      "phone": "9876543210",
+      "password": "Password123",
+      "gender": "male"
+    }
+    ```
+*   **Response (201):**
+    ```json
+    {
+      "success": true,
+      "message": "Customer registered successfully",
+      "accessToken": "...",
+      "user": { "id": "...", "firstName": "John", "role": "customer", "email": "...", "phone": "..." }
+    }
+    ```
 
 ### Register Vendor
-`POST /auth/register/vendor`
-- **Description:** Register a new vendor account (requires admin approval).
-- **Request Body:** Includes all Customer fields plus:
-  | Field | Type | Required | Description |
-  | :--- | :--- | :--- | :--- |
-  | businessName| String | Yes | Name of the business/shop |
-  | experience | Number | No | Years in business |
-  | skills | Array | No | String array of skills |
-  | serviceAreas| Array | No | `[{ "city": "...", "pincode": "..." }]` |
-- **Response (201):**
-  ```json
-  {
-    "success": true,
-    "message": "Vendor registered successfully. Waiting for admin approval.",
-    "user": { "id": "...", "verificationStatus": "pending", "role": "vendor" }
-  }
-  ```
+*   **POST** `/api/auth/register/vendor`
+*   **Description:** Registers a new vendor with legal documents.
+*   **Request Body:**
+    ```json
+    {
+      "firstName": "Jane",
+      "lastName": "Vendor",
+      "email": "jane@business.com",
+      "phone": "9988776655",
+      "password": "SecurePassword",
+      "businessName": "Jane Services",
+      "ownerName": "Jane Doe",
+      "aadharNumber": "123456789012",
+      "panNumber": "ABCDE1234F",
+      "aadharFront": "url_to_image",
+      "aadharBack": "url_to_image",
+      "panCard": "url_to_image",
+      "experience": 5,
+      "skills": ["Plumbing", "Electrical"],
+      "serviceAreas": ["Mumbai", "Thane"]
+    }
+    ```
+*   **Response (201):**
+    ```json
+    {
+      "success": true,
+      "message": "Vendor registered successfully. Waiting for admin approval.",
+      "accessToken": "...",
+      "user": { "id": "...", "role": "vendor", "verificationStatus": "pending" }
+    }
+    ```
 
 ### Login
-`POST /auth/login`
-- **Request Body:** `{ "email": "...", "password": "...", "role": "customer/vendor/admin" }`
-- **Response (200):** Includes `accessToken` and `user` object. Set `refreshToken` in HttpOnly cookie.
+*   **POST** `/api/auth/login`
+*   **Request Body:**
+    ```json
+    {
+      "email": "john@example.com",
+      "password": "Password123",
+      "role": "customer" 
+    }
+    ```
+*   **Response (200):**
+    ```json
+    {
+      "success": true,
+      "message": "Customer logged in successfully",
+      "accessToken": "...",
+      "user": { "id": "...", "firstName": "John", "role": "customer" }
+    }
+    ```
+    *Note: Sets `refreshToken` in HttpOnly cookie.*
+
+### Refresh Token
+*   **POST** `/api/auth/refresh`
+*   **Request:** Requires `refreshToken` cookie.
+*   **Response (200):** `{ "success": true, "accessToken": "..." }`
+
+### Logout
+*   **POST** `/api/auth/logout`
+*   **Authentication:** Required
+*   **Response (200):** `{ "success": true, "message": "Logged out successfully" }`
+
+### Get Me
+*   **GET** `/api/auth/me`
+*   **Authentication:** Required
+*   **Response (200):** `{ "success": true, "user": { ... } }`
 
 ---
 
-## 🛡️ Admin Routes (`/admin`)
+## 🛍️ 2. Customer Services Explorer (`/api/user/services`)
 
-### User & Vendor Management
-| Method | Endpoint | Query/Body | Description |
-| :--- | :--- | :--- | :--- |
-| GET | `/users` | `?role, isActive, page, limit` | List users/vendors with pagination |
-| GET | `/users/search` | `?query, page, limit` | Search by name, email, phone, or ID |
-| PUT | `/vendors/:id/approve` | - | Approve vendor registration |
-| PUT | `/vendors/:id/reject` | `{ "reason": String }` | Reject vendor registration |
-| GET | `/vendors/nearby` | `?longitude, latitude, distance` | Find vendors within radius (km) |
+### Get Categories
+*   **GET** `/api/user/services/categories`
+*   **Response (200):** `{ "success": true, "data": [{ "_id": "...", "name": "Plumbing", "image": "..." }, ...] }`
 
-### Worker Management
-| Method | Endpoint | Query/Body | Description |
-| :--- | :--- | :--- | :--- |
-| GET | `/workers` | `?status, vendorId, page, limit` | List all workers with filters |
-| GET | `/workers/pending` | `?page, limit` | List workers awaiting approval |
-| GET | `/workers/approved` | `?page, limit` | List all approved workers |
-| GET | `/workers/rejected` | `?page, limit` | List all rejected workers |
-| GET | `/workers/:id` | - | Get detailed worker profile & vendor info |
-| GET | `/workers/:id/bookings` | `?status, page, limit` | Get job/booking history for a worker |
-| PATCH | `/workers/:id/approve` | - | Approve a worker |
-| PATCH | `/workers/:id/reject` | `{ "reason": String }` | Reject a worker |
+### Search Services
+*   **GET** `/api/user/services/search?query=pipe&page=1&limit=10`
+*   **Response (200):** Paginated services matching "pipe".
 
-### Booking Management
-| Method | Endpoint | Request Details | Description |
-| :--- | :--- | :--- | :--- |
-| GET | `/bookings` | `?status, vendorId, customerId, startDate, endDate` | Comprehensive booking list |
-| PATCH | `/bookings/:id/status` | `{ "status": "confirmed/completed/cancelled", "reason": "..." }` | Update booking status |
-| PUT | `/bookings/:id/cancel` | `{ "reason": String, "refundAmount": Number }` | Admin-initiated cancellation |
+### Get Top Rated Services
+*   **GET** `/api/user/services/top-rated?limit=5`
+*   **Response (200):** List of services with highest average ratings.
+
+### Get Services by Category
+*   **GET** `/api/user/services/category/:categoryId`
+*   **Response (200):** `{ "success": true, "data": { "category": { ... }, "services": [...] } }`
+
+### Get Service Details
+*   **GET** `/api/user/services/:serviceId`
+*   **Response (200):** Full service object with vendor details.
 
 ---
 
-## 🏬 Vendor Routes (`/vendor`)
+## 🛒 3. Customer Booking Operations (`/api/user/bookings`)
 
-### Worker Management
-| Method | Endpoint | Request Body | Description |
-| :--- | :--- | :--- | :--- |
-| POST | `/workers` | `{ firstName, lastName, email, phone, password, serviceCategory }` | Register a new worker for the vendor |
-| GET | `/workers` | `?status, page, limit` | List vendor's workers |
-| PATCH | `/bookings/:id/assign-worker` | `{ "workerId": String }` | Assign a worker to a specific booking |
+### Create Booking
+*   **POST** `/api/user/bookings/`
+*   **Authentication:** `customer`
+*   **Request Body:**
+    ```json
+    {
+      "serviceId": "...",
+      "vendorId": "...",
+      "bookingDate": "2024-07-20",
+      "timeSlot": { "startTime": "10:00", "endTime": "11:00" },
+      "serviceAddress": {
+        "street": "123 Main St",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pincode": "400001",
+        "label": "Home"
+      },
+      "paymentMethod": "online",
+      "customerNotes": "Please come on time."
+    }
+    ```
+*   **Response (201):** `{ "success": true, "data": { "status": "pending", ... } }`
 
-### Service Management
-| Method | Endpoint | Request Body | Description |
-| :--- | :--- | :--- | :--- |
-| POST | `/services` | `{ name, description, category, basePrice, images }` | Create service (Pending Approval) |
-| PUT | `/services/:id` | `{ basePrice, isAvailable, description, ... }` | Update service details |
+### Get My Bookings
+*   **GET** `/api/user/bookings/?status=confirmed&page=1`
+*   **Response (200):** Paginated bookings list for the logged-in customer.
 
-### Booking Operations
-| Method | Endpoint | Request Body | Description |
-| :--- | :--- | :--- | :--- |
-| PUT | `/bookings/:id/accept` | - | Accept a pending booking request |
-| PUT | `/bookings/:id/reject` | `{ "reason": String }` | Reject a pending booking request |
-| POST | `/bookings/:id/verify-start-otp` | `{ "otp": String }` | Verify customer OTP to start work |
-| POST | `/bookings/:id/verify-end-otp` | `{ "otp": String }` | Verify customer OTP to finish work |
-| POST | `/bookings/:id/proof-of-work` | `{ "beforeImages": [], "afterImages": [], "vendorNotes": "" }` | Upload service evidence |
+### Get Booking Details
+*   **GET** `/api/user/bookings/:bookingId`
+*   **Response (200):** Detailed booking info including status and pricing.
+
+### Cancel Booking
+*   **PUT** `/api/user/bookings/:bookingId/cancel`
+*   **Request Body:** `{ "reason": "Change of plans" }`
+
+### Reschedule Booking
+*   **PUT** `/api/user/bookings/:bookingId/reschedule`
+*   **Request Body:** 
+    ```json
+    { 
+      "bookingDate": "2024-07-21", 
+      "timeSlot": { "startTime": "14:00", "endTime": "15:00" }, 
+      "reason": "Family emergency" 
+    }
+    ```
 
 ---
 
-## 👤 User Routes (`/user`)
+## 💳 4. Customer Payment Integration (`/api/user/payments`)
 
-### Service Discovery
-| Method | Endpoint | Query | Description |
-| :--- | :--- | :--- | :--- |
-| GET | `/services` | `?query, category, minPrice, maxPrice` | Search and filter services |
-| GET | `/services/top-rated` | - | List services with best ratings |
-| GET | `/categories` | - | List all service categories |
+### Create Razorpay Order
+*   **POST** `/api/user/payments/create-order`
+*   **Request Body:** `{ "bookingId": "..." }`
+*   **Response (200):** `{ "success": true, "order": { "id": "order_...", "amount": 50000 }, "key": "..." }`
 
-### Booking Management
-| Method | Endpoint | Request Body/Query | Description |
-| :--- | :--- | :--- | :--- |
-| GET | `/bookings/vendor-availability/:vendorId` | `?date=YYYY-MM-DD` | Check vendor busy slots for a date |
-| POST | `/bookings` | `{ serviceId, vendorId, bookingDate, timeSlot, serviceAddress, paymentMethod }` | Create a new booking |
-| GET | `/bookings/:id` | - | Get booking details (includes assigned worker info) |
-| PUT | `/bookings/:id/cancel` | `{ "reason": String }` | Cancel booking (triggers refund logic) |
-| PUT | `/bookings/:id/reschedule` | `{ "bookingDate", "timeSlot", "reason" }` | Change appointment time |
+### Verify Payment
+*   **POST** `/api/user/payments/verify-payment`
+*   **Request Body:**
+    ```json
+    {
+      "razorpay_order_id": "...",
+      "razorpay_payment_id": "...",
+      "razorpay_signature": "...",
+      "bookingId": "..."
+    }
+    ```
+*   **Response (200):** `{ "success": true, "message": "Payment verified...", "data": { "status": "completed", ... } }`
 
 ---
 
-## 🔔 Notifications (`/notifications`)
+## 🛠️ 5. Vendor Custom Service Control (`/api/vendor/services`)
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| GET | `/` | List all notifications for current user |
-| GET | `/unread/count` | Get count of unread notifications |
-| PUT | `/:id/read` | Mark specific notification as read |
-| DELETE| `/` | Clear all notifications |
+### Create Standalone Service
+*   **POST** `/api/vendor/services/`
+*   **Authentication:** `vendor` (Approved)
+*   **Request Body:**
+    ```json
+    {
+      "name": "Custom AC Service",
+      "description": "Full deep cleaning",
+      "category": "...",
+      "basePrice": 800,
+      "estimatedDuration": "2 hours",
+      "features": ["Water cleaning", "Gas check"]
+    }
+    ```
+*   **Response (201):** `{ "success": true, "service": { "approvalStatus": "pending", ... } }`
+
+### Get My Services
+*   **GET** `/api/vendor/services/`
+*   **Response (200):** All services created by the vendor with approval statuses.
+
+### Update Service
+*   **PUT** `/api/vendor/services/:id`
+*   **Request Body:** `{ "basePrice": 850, "isActive": true }`
+
+---
+
+## 📅 6. Vendor Booking Management (`/api/vendor/bookings`)
+
+### Accept Booking
+*   **PUT** `/api/vendor/bookings/:id/accept`
+*   **Response (200):** Sets status to `confirmed`.
+
+### Reject Booking
+*   **PUT** `/api/vendor/bookings/:id/reject`
+*   **Request Body:** `{ "reason": "Outside service area" }`
+
+### Assign Worker
+*   **PUT** `/api/vendor/bookings/:id/assign-worker`
+*   **Request Body:** `{ "workerId": "..." }`
+
+### Verify Start OTP
+*   **POST** `/api/vendor/bookings/:id/verify-start-otp`
+*   **Request Body:** `{ "otp": "123456" }`
+*   **Response (200):** Moves status to `on_the_way` (or `in_progress` depending on flow).
+
+### Verify End OTP
+*   **POST** `/api/vendor/bookings/:id/verify-end-otp`
+*   **Request Body:** `{ "otp": "654321" }`
+*   **Response (200):** Status moves to `work_done` (or `completed` if cash).
+
+### Submit Proof of Work
+*   **POST** `/api/vendor/bookings/:id/proof-of-work`
+*   **Request Body:** 
+    ```json
+    { 
+      "beforeImages": ["url1"], 
+      "afterImages": ["url2"], 
+      "vendorNotes": "Done successfully" 
+    }
+    ```
+
+---
+
+## 👤 7. Vendor Profile & Catalog (`/api/vendor/profile`)
+
+### Get Profile
+*   **GET** `/api/vendor/profile/`
+*   **Response (200):** Full vendor details and subscription info.
+
+### Update Profile
+*   **PUT** `/api/vendor/profile/`
+*   **Request Body:** `{ "businessName": "Jane Pro Services", "experience": 6 }`
+
+### Select Catalog Service
+*   **POST** `/api/vendor/profile/services/select`
+*   **Request Body:** `{ "serviceId": "...", "vendorPrice": 500 }`
+*   **Description:** Adds a pre-defined system service to the vendor's offerings.
+
+### Update Availability
+*   **PUT** `/api/vendor/profile/availability`
+*   **Request Body:** `{ "isAvailable": true }`
+
+### Update Current Location
+*   **PUT** `/api/vendor/profile/location`
+*   **Request Body:** `{ "longitude": 72.8777, "latitude": 19.0760 }`
+
+---
+
+## 👷 8. Vendor Field Workers (`/api/vendor/workers`)
+
+### Add Worker
+*   **POST** `/api/vendor/workers/`
+*   **Request Body:**
+    ```json
+    {
+      "firstName": "Bob",
+      "lastName": "Worker",
+      "phone": "9000000001",
+      "password": "WorkerPassword",
+      "aadharNumber": "000011112222"
+    }
+    ```
+
+---
+
+## 🛡️ 9. Admin User Management (`/api/admin/users`)
+
+### Get All Users
+*   **GET** `/api/admin/users/`
+*   **Response (200):** List of all customers and vendors.
+
+### Block/Unblock User
+*   **PUT** `/api/admin/users/:id/block`
+*   **PUT** `/api/admin/users/:id/unblock`
+
+---
+
+## 🏢 10. Admin Vendor Oversight (`/api/admin/vendors`)
+
+### Approve Vendor
+*   **PUT** `/api/admin/vendors/:id/approve`
+*   **Response (200):** Status becomes `approved`.
+
+### Reject Vendor
+*   **PUT** `/api/admin/vendors/:id/reject`
+*   **Request Body:** `{ "reason": "Documents blurry" }`
+
+---
+
+## 📂 11. Admin Global Categories & Services (`/api/admin/categories` & `/api/admin/services`)
+
+### Create Category
+*   **POST** `/api/admin/categories/`
+*   **Request Body:** `{ "name": "Electrical", "image": "..." }`
+
+### Approve Vendor Service
+*   **PUT** `/api/admin/services/approval/:serviceId/approve`
+*   **Description:** Approves a custom service created by a vendor.
+
+---
+
+## 📊 12. Admin Analytics & Bookings (`/api/admin`)
+
+### Get Stats
+*   **GET** `/api/admin/stats`
+*   **Response (200):** Global platform metrics.
+
+### Export Bookings
+*   **GET** `/api/admin/export/bookings`
+*   **Response:** CSV file stream.
+
+---
+
+## 🔔 13. Notifications (`/api/notifications`)
+
+### Get Notifications
+*   **GET** `/api/notifications/`
+*   **Response (200):** Paginated user notifications.
+
+### Mark as Read
+*   **PUT** `/api/notifications/:notificationId/read`
+
+---
+
+## 🩺 14. Global Utilities
+
+### Health Check
+*   **GET** `/health`
+*   **Response (200):** `{ "status": "UP" }`

@@ -63,6 +63,8 @@ const userSchema = new mongoose.Schema({
   vendor: {
     businessName: { type: String },
     ownerName:    { type: String },
+    aadharNumber: { type: String },
+    panNumber:    { type: String },
     experience:   { type: Number },
 
     skills:            [{ type: String }],

@@ -92,7 +92,24 @@ exports.registerCustomer = async (req, res) => {
 
 exports.registerVendor = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, password, gender, businessName, experience, skills, serviceAreas } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      gender,
+      businessName,
+      ownerName,
+      experience,
+      skills,
+      serviceAreas,
+      aadharNumber,
+      panNumber,
+      aadharFront,
+      aadharBack,
+      panCard
+    } = req.body;
 
     if (!firstName || !lastName || !email || !phone || !password || !businessName) {
       return res.status(400).json({
@@ -119,10 +136,18 @@ exports.registerVendor = async (req, res) => {
       role: 'vendor',
       vendor: {
         businessName,
+        ownerName: ownerName || `${firstName} ${lastName}`,
+        aadharNumber,
+        panNumber,
         experience:   experience || 0,
         skills:       skills      || [],
         serviceAreas: serviceAreas || [],
         verificationStatus: 'pending',
+        documents: {
+          aadharFront: { url: aadharFront },
+          aadharBack:  { url: aadharBack },
+          panCard:     { url: panCard },
+        },
       },
     });
 
