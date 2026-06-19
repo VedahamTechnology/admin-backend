@@ -14,12 +14,13 @@
   "author": "",
   "type": "commonjs",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "seed:admin": "node scripts/seedAdmin.js",
-    "migrate:booking": "node scripts/migrateBookingModel.js",
-    "dev": "nodemon index.js"
-  },
+ "scripts": {
+  "start": "node index.js",
+  "dev": "nodemon index.js",
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "seed:admin": "node scripts/seedAdmin.js",
+  "migrate:booking": "node scripts/migrateBookingModel.js"
+},
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
