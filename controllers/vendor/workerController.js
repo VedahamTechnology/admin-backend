@@ -14,8 +14,7 @@ exports.addWorker = async (req, res) => {
       gender,
       aadharNumber,
       panNumber,
-      serviceCategory,
-      aadharFrontUrl
+      serviceCategory
     } = req.body;
 
     // Check if worker already exists
@@ -26,6 +25,9 @@ exports.addWorker = async (req, res) => {
         message: 'User with this email or phone already exists',
       });
     }
+
+    // Extract file URL from Cloudinary upload
+    const aadharFrontUrl = req.files && req.files['aadharFront'] ? req.files['aadharFront'][0].path : null;
 
     const worker = await User.create({
       firstName,

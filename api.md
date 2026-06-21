@@ -32,27 +32,23 @@ Welcome to the definitive backend API documentation. Every single individual end
 
 ### Register Vendor
 *   **POST** `/api/auth/register/vendor`
-*   **Description:** Registers a new vendor with legal documents.
-*   **Request Body:**
-    ```json
-    {
-      "firstName": "Jane",
-      "lastName": "Vendor",
-      "email": "jane@business.com",
-      "phone": "9988776655",
-      "password": "SecurePassword",
-      "businessName": "Jane Services",
-      "ownerName": "Jane Doe",
-      "aadharNumber": "123456789012",
-      "panNumber": "ABCDE1234F",
-      "aadharFront": "url_to_image",
-      "aadharBack": "url_to_image",
-      "panCard": "url_to_image",
-      "experience": 5,
-      "skills": ["Plumbing", "Electrical"],
-      "serviceAreas": ["Mumbai", "Thane"]
-    }
-    ```
+*   **Description:** Registers a new vendor with legal documents. **(Uses Multipart Form Data)**
+*   **Request Body (form-data):**
+    *   `firstName`: (String) John
+    *   `lastName`: (String) Doe
+    *   `email`: (String) john@vendor.com
+    *   `phone`: (String) 9876543210
+    *   `password`: (String) password123
+    *   `businessName`: (String) John Services
+    *   `ownerName`: (String) John Doe
+    *   `aadharNumber`: (String) 123456789012
+    *   `panNumber`: (String) ABCDE1234F
+    *   `experience`: (Number) 5
+    *   `skills`: (Array/String) ["Plumbing"]
+    *   **Files:**
+        *   `aadharFront`: (File) - Uploads to Cloudinary
+        *   `aadharBack`: (File) - Uploads to Cloudinary
+        *   `panCard`: (File) - Uploads to Cloudinary
 *   **Response (201):**
     ```json
     {
@@ -202,17 +198,16 @@ Welcome to the definitive backend API documentation. Every single individual end
 ### Create Standalone Service
 *   **POST** `/api/vendor/services/`
 *   **Authentication:** `vendor` (Approved)
-*   **Request Body:**
-    ```json
-    {
-      "name": "Custom AC Service",
-      "description": "Full deep cleaning",
-      "category": "...",
-      "basePrice": 800,
-      "estimatedDuration": "2 hours",
-      "features": ["Water cleaning", "Gas check"]
-    }
-    ```
+*   **Description:** Creates a new service. **(Uses Multipart Form Data)**
+*   **Request Body (form-data):**
+    *   `name`: (String)
+    *   `description`: (String)
+    *   `category`: (ID)
+    *   `basePrice`: (Number)
+    *   `estimatedDuration`: (Number)
+    *   **Files:**
+        *   `image`: (File, single) - Main service image
+        *   `images`: (Files, multiple) - Gallery images
 *   **Response (201):** `{ "success": true, "service": { "approvalStatus": "pending", ... } }`
 
 ### Get My Services
@@ -291,16 +286,16 @@ Welcome to the definitive backend API documentation. Every single individual end
 
 ### Add Worker
 *   **POST** `/api/vendor/workers/`
-*   **Request Body:**
-    ```json
-    {
-      "firstName": "Bob",
-      "lastName": "Worker",
-      "phone": "9000000001",
-      "password": "WorkerPassword",
-      "aadharNumber": "000011112222"
-    }
-    ```
+*   **Description:** Adds a worker under the vendor. **(Uses Multipart Form Data)**
+*   **Request Body (form-data):**
+    *   `firstName`: (String)
+    *   `lastName`: (String)
+    *   `phone`: (String)
+    *   `password`: (String)
+    *   `aadharNumber`: (String)
+    *   **Files:**
+        *   `aadharFront`: (File) - Worker document
+*   **Response (201):** `{ "success": true, "message": "Worker request sent..." }`
 
 ---
 
@@ -332,7 +327,18 @@ Welcome to the definitive backend API documentation. Every single individual end
 
 ### Create Category
 *   **POST** `/api/admin/categories/`
-*   **Request Body:** `{ "name": "Electrical", "image": "..." }`
+*   **Description:** Creates a new category. **(Uses Multipart Form Data)**
+*   **Request Body (form-data):**
+    *   `name`: (String)
+    *   `description`: (String)
+    *   **Files:**
+        *   `image`: (File) - Category banner/icon
+*   **Response (201):** `{ "success": true, "category": { ... } }`
+
+### Update Category
+*   **PUT** `/api/admin/categories/:id`
+*   **Description:** Updates category. **(Uses Multipart Form Data if updating image)**
+*   **Request Body (form-data):** `name`, `description`, `image` (file)
 
 ### Approve Vendor Service
 *   **PUT** `/api/admin/services/approval/:serviceId/approve`

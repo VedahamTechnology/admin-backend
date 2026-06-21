@@ -6,7 +6,7 @@ const Category = require('../../models/Category');
  */
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description, image, icon, displayOrder } = req.body;
+    const { name, description, icon, displayOrder } = req.body;
 
     // Validate required fields
     if (!name) {
@@ -25,10 +25,13 @@ exports.createCategory = async (req, res) => {
       });
     }
 
+    // Extract file URL from Cloudinary upload
+    const imageUrl = req.file ? req.file.path : null;
+
     const category = await Category.create({
       name,
       description,
-      image,
+      image: imageUrl,
       icon,
       displayOrder: displayOrder || 0,
     });

@@ -105,10 +105,7 @@ exports.registerVendor = async (req, res) => {
       skills,
       serviceAreas,
       aadharNumber,
-      panNumber,
-      aadharFront,
-      aadharBack,
-      panCard
+      panNumber
     } = req.body;
 
     if (!firstName || !lastName || !email || !phone || !password || !businessName) {
@@ -125,6 +122,11 @@ exports.registerVendor = async (req, res) => {
         message: existingUser.email === email ? 'Email already registered' : 'Phone already registered',
       });
     }
+
+    // Extract file URLs from Cloudinary upload
+    const aadharFrontUrl = req.files && req.files['aadharFront'] ? req.files['aadharFront'][0].path : null;
+    const aadharBackUrl  = req.files && req.files['aadharBack']  ? req.files['aadharBack'][0].path  : null;
+    const panCardUrl     = req.files && req.files['panCard']     ? req.files['panCard'][0].path     : null;
 
     const vendor = await User.create({
       firstName,
@@ -144,9 +146,9 @@ exports.registerVendor = async (req, res) => {
         serviceAreas: serviceAreas || [],
         verificationStatus: 'pending',
         documents: {
-          aadharFront: { url: aadharFront },
-          aadharBack:  { url: aadharBack },
-          panCard:     { url: panCard },
+          aadharFront: { url: aadharFrontUrl },
+          aadharBack:  { url: aadharBackUrl },
+          panCard:     { url: panCardUrl },
         },
       },
     });

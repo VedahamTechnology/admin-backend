@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const bookingSchema = new mongoose.Schema({
   /**
    * BOOKING IDENTIFICATION
-   * bookingId is atomically generated using a Counter collection to prevent race conditions
    */
   customer: {
     type:     mongoose.Schema.Types.ObjectId,
@@ -239,9 +238,6 @@ const bookingSchema = new mongoose.Schema({
 
 /**
  * PRE-SAVE MIDDLEWARE
- * 1. Validate pricing calculations
- * 2. Set TTL expiry for pending bookings
- * 3. Hash OTPs if provided
  */
 bookingSchema.pre('save', async function() {
   // Validate pricing: totalAmount should equal basePrice + platformFee + tax - discount
@@ -276,18 +272,14 @@ bookingSchema.pre('save', async function() {
 
 /**
  * INSTANCE METHOD: Verify OTP
- * Compares provided OTP with bcrypt hash
  */
 bookingSchema.methods.verifyStartOtp = async function(providedOtp) {
   if (!this.otp || !this.otp.startOtp || !providedOtp) {
     return false;
   }
-
-  // Check if OTP has expired
   if (this.otp.otpExpiresAt && new Date() > this.otp.otpExpiresAt) {
     return false;
   }
-
   return bcrypt.compare(providedOtp, this.otp.startOtp);
 };
 
@@ -295,47 +287,19 @@ bookingSchema.methods.verifyEndOtp = async function(providedOtp) {
   if (!this.otp || !this.otp.endOtp || !providedOtp) {
     return false;
   }
-
-  // Check if OTP has expired
   if (this.otp.otpExpiresAt && new Date() > this.otp.otpExpiresAt) {
     return false;
   }
-
   return bcrypt.compare(providedOtp, this.otp.endOtp);
 };
 
 /**
- * INSTANCE METHOD: Add reschedule to history
+ * INDEXES
  */
-bookingSchema.methods.addRescheduleHistory = function(previousDate, previousSlot, rescheduledBy, reason) {
-  if (!this.rescheduleHistory) {
-    this.rescheduleHistory = [];
-  }
-
-  this.rescheduleHistory.push({
-    previousDate,
-    previousSlot,
-    rescheduledBy,
-    rescheduledAt: new Date(),
-    reason,
-  });
-};
-
-/**
- * INDEXES (Compound indexes for optimal query performance)
- */
-// Customer bookings with status filtering
 bookingSchema.index({ customer: 1, createdAt: -1 });
 bookingSchema.index({ customer: 1, status: 1, createdAt: -1 });
-
-// Vendor dashboard queries
 bookingSchema.index({ vendor: 1, createdAt: -1 });
 bookingSchema.index({ vendor: 1, status: 1, bookingDate: 1 });
-
-// Geospatial queries (for finding services near location)
 bookingSchema.index({ 'serviceAddress.location': '2dsphere' });
-
-// Note: Single-field indexes (status, payment.status, bookingDate, bookingId, expiresAt)
-// are created via "index: true" in schema fields to avoid duplicates
 
 module.exports = mongoose.model('Booking', bookingSchema);

@@ -18,8 +18,6 @@ exports.createService = async (req, res) => {
       basePrice,
       discountedPrice,
       estimatedDuration,
-      image,
-      images,
       features,
       includes,
       excludes,
@@ -33,6 +31,10 @@ exports.createService = async (req, res) => {
       });
     }
 
+    // Extract file URLs from Cloudinary upload
+    const imageUrl = req.files && req.files['image'] ? req.files['image'][0].path : null;
+    const imagesArray = req.files && req.files['images'] ? req.files['images'].map(file => file.path) : [];
+
     // Vendor existence and approval is already verified by middleware
     // Create service with pending approval status
     const service = await Service.create({
@@ -43,8 +45,8 @@ exports.createService = async (req, res) => {
       basePrice,
       discountedPrice: discountedPrice || basePrice,
       estimatedDuration,
-      image,
-      images: images || [],
+      image: imageUrl,
+      images: imagesArray,
       features: features || [],
       includes: includes || [],
       excludes: excludes || [],

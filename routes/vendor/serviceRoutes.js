@@ -14,6 +14,7 @@ const {
 } = require('../../controllers/vendor/serviceController');
 
 const { protect, authorize, verifyVendorApproval } = require('../../middleware/auth');
+const { upload } = require('../../config/cloudinary');
 
 // Public browsing routes - no authentication required
 router.get('/browse/categories', getCategories);
@@ -25,7 +26,10 @@ router.use(authorize('vendor'));
 router.use(verifyVendorApproval);
 
 // Service management routes
-router.post('/', createService);
+router.post('/', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'images', maxCount: 5 }
+]), createService);
 router.get('/', getMyServices);
 router.get('/search', searchServices);
 router.get('/:id', getServiceById);
