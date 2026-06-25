@@ -207,3 +207,73 @@ Welcome to the definitive backend API documentation. Every single individual end
     *   **Files:**
         *   `image`: (File) - Category banner/icon
 *   **Response (201):** `{ "success": true, "category": { ... } }`
+
+---
+
+## 📍 12. Customer Address Management (`/api/user/addresses`)
+
+### Add Address
+*   **POST** `/api/user/addresses/`
+*   **Authentication:** `customer`
+*   **Request Body:**
+    ```json
+    {
+      "label": "Home",
+      "street": "123 Street Name",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001",
+      "latitude": 19.0760,
+      "longitude": 72.8777,
+      "isDefault": true
+    }
+    ```
+*   **Response (201):** `{ "success": true, "message": "Address added successfully", "addresses": [...] }`
+
+### Get All Addresses
+*   **GET** `/api/user/addresses/`
+*   **Response (200):** List of all saved addresses for the user.
+
+### Update Address
+*   **PUT** `/api/user/addresses/:addressId`
+*   **Request Body:** Same as Add Address (all fields optional).
+*   **Response (200):** `{ "success": true, "message": "Address updated successfully", "addresses": [...] }`
+
+### Delete Address
+*   **DELETE** `/api/user/addresses/:addressId`
+*   **Response (200):** `{ "success": true, "message": "Address deleted successfully" }`
+
+### Set Default Address
+*   **PUT** `/api/user/addresses/:addressId/default`
+*   **Response (200):** `{ "success": true, "message": "Default address updated successfully" }`
+
+---
+
+## 👤 13. Customer Profile Management (`/api/user/profile`)
+
+### Get Profile
+*   **GET** `/api/user/profile/`
+*   **Authentication:** `customer`
+*   **Response (200):** Full user object (excluding password and refresh token).
+
+### Update Profile
+*   **PUT** `/api/user/profile/`
+*   **Description:** Updates user's personal information. **Note: Email cannot be changed.**
+*   **Request Body:**
+    ```json
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "phone": "9876543210",
+      "gender": "male"
+    }
+    ```
+*   **Response (200):** `{ "success": true, "message": "Profile updated successfully", "user": { ... } }`
+
+---
+
+## 🩺 14. Global Utilities
+
+### Health Check
+*   **GET** `/health`
+*   **Response (200):** `{ "status": "UP" }`

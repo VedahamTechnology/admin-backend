@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
 
   firstName: { type: String, required: true, trim: true },
   lastName:  { type: String, required: false, trim: true },
-  email:     { type: String, required: true, unique: true, lowercase: true },
+  email:     { type: String, required: true, unique: true, lowercase: true, immutable: true },
   phone:     { type: String, required: true, unique: true },
   password:  { type: String, required: true, minlength: 8, select: false },
   gender:    { type: String, enum: ['male', 'female', 'other'] },
@@ -59,6 +59,26 @@ const userSchema = new mongoose.Schema({
     pincode: { type: String },
     address: { type: String },
   },
+
+  addresses: [{
+    label:   { type: String, default: 'Home' }, // Home, Office, etc.
+    street:  { type: String },
+    city:    { type: String },
+    state:   { type: String },
+    pincode: { type: String },
+    location: {
+      type: {
+        type:    String,
+        enum:    ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type:    [Number],
+        default: [0, 0],
+      },
+    },
+    isDefault: { type: Boolean, default: false },
+  }],
 
   vendor: {
     businessName: { type: String },
@@ -117,6 +137,7 @@ userSchema.index({ role: 1 });
 userSchema.index({ vendorId: 1 });
 userSchema.index({ location: '2dsphere' });
 userSchema.index({ 'vendor.currentLocation': '2dsphere' });
+userSchema.index({ 'addresses.location': '2dsphere' });
 userSchema.index({ 'vendor.verificationStatus': 1 });
 userSchema.index({ 'vendor.serviceAreas.pincode': 1 });
 
