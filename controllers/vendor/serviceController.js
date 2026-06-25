@@ -35,13 +35,11 @@ exports.createService = async (req, res) => {
     const imageUrl = req.files && req.files['image'] ? req.files['image'][0].path : null;
     const imagesArray = req.files && req.files['images'] ? req.files['images'].map(file => file.path) : [];
 
-    // Vendor existence and approval is already verified by middleware
-    // Create service with pending approval status
-    const service = await Service.create({
+    // Create service object - handle empty optional ObjectIds
+    const serviceData = {
       name,
       description,
       category,
-      brand,
       basePrice,
       discountedPrice: discountedPrice || basePrice,
       estimatedDuration,
@@ -51,11 +49,17 @@ exports.createService = async (req, res) => {
       includes: includes || [],
       excludes: excludes || [],
       vendor: req.user._id,
-      // Set initial approval status
       isApproved: false,
       approvalStatus: 'pending',
       createdByVendor: req.user._id,
-    });
+    };
+
+    // Only add brand if it's a non-empty string
+    if (brand && brand.trim() !== '') {
+      serviceData.brand = brand;
+    }
+
+    const service = await Service.create(serviceData);
 
     // Populate category information
     await service.populate('category', 'name');
