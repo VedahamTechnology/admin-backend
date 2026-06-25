@@ -128,6 +128,15 @@ exports.registerVendor = async (req, res) => {
     const aadharBackUrl  = req.files && req.files['aadharBack']  ? req.files['aadharBack'][0].path  : null;
     const panCardUrl     = req.files && req.files['panCard']     ? req.files['panCard'][0].path     : null;
 
+    // Format skills and serviceAreas for Mongoose schema (especially for multipart/form-data)
+    const formattedSkills = Array.isArray(skills)
+      ? skills
+      : (typeof skills === 'string' ? skills.split(',').map(s => s.trim()).filter(s => s !== '') : []);
+
+    const formattedServiceAreas = Array.isArray(serviceAreas)
+      ? serviceAreas.map(area => typeof area === 'string' ? { city: area.trim() } : area)
+      : (typeof serviceAreas === 'string' ? serviceAreas.split(',').map(s => ({ city: s.trim() })).filter(a => a.city !== '') : []);
+
     const vendor = await User.create({
       firstName,
       lastName,
@@ -141,9 +150,9 @@ exports.registerVendor = async (req, res) => {
         ownerName: ownerName || `${firstName} ${lastName}`,
         aadharNumber,
         panNumber,
-        experience:   experience || 0,
-        skills:       skills      || [],
-        serviceAreas: serviceAreas || [],
+        experience:   Number(experience) || 0,
+        skills:       formattedSkills,
+        serviceAreas: formattedServiceAreas,
         verificationStatus: 'pending',
         documents: {
           aadharFront: { url: aadharFrontUrl },

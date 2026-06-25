@@ -48,7 +48,7 @@ exports.createBooking = async (req, res) => {
 
     // Validate vendor exists and is approved
     const vendor = await User.findById(vendorId);
-    if (!vendor || vendor.role !== 'vendor' || !vendor.isApproved || vendor.isBanned) {
+    if (!vendor || vendor.role !== 'vendor' || vendor.vendor.verificationStatus !== 'approved' || vendor.isBanned) {
       return res.status(404).json({
         success: false,
         message: 'Vendor not found or is not available',
