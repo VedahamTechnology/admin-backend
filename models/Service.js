@@ -78,6 +78,19 @@ const serviceSchema = new mongoose.Schema({
     ref: 'User',
   },
 
+  // Geospatial location for searching (mirrors vendor's location)
+  location: {
+    type: {
+      type:    String,
+      enum:    ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type:    [Number],
+      default: [0, 0],
+    },
+  },
+
 }, { timestamps: true });
 
 serviceSchema.pre('save', async function() {
@@ -86,6 +99,7 @@ serviceSchema.pre('save', async function() {
   }
 });
 
+serviceSchema.index({ location: '2dsphere' });
 serviceSchema.index({ category: 1, isActive: 1, approvalStatus: 1 });
 serviceSchema.index({ brand: 1 });
 // Note: slug index is already created by unique: true constraint

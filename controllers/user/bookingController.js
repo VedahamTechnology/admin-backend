@@ -26,6 +26,15 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // Validate coordinates presence
+    const { latitude, longitude } = serviceAddress;
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Exact location (latitude and longitude) is required for booking',
+      });
+    }
+
     // Validate service exists and is APPROVED
     const service = await Service.findById(serviceId);
     if (!service || !service.isActive || service.approvalStatus !== 'approved') {
@@ -117,7 +126,10 @@ exports.createBooking = async (req, res) => {
         city: serviceAddress.city,
         state: serviceAddress.state,
         pincode: serviceAddress.pincode,
-        location: serviceAddress.location || { type: 'Point', coordinates: [0, 0] },
+        location: {
+          type: 'Point',
+          coordinates: [parseFloat(longitude), parseFloat(latitude)],
+        },
         instructions: serviceAddress.instructions,
       },
       pricing: {

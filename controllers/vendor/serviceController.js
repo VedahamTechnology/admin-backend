@@ -35,6 +35,10 @@ exports.createService = async (req, res) => {
     const imageUrl = req.files && req.files['image'] ? req.files['image'][0].path : null;
     const imagesArray = req.files && req.files['images'] ? req.files['images'].map(file => file.path) : [];
 
+    // Get vendor's current location to store with service
+    const vendor = await User.findById(req.user._id);
+    const serviceLocation = vendor.vendor?.currentLocation || vendor.location || { type: 'Point', coordinates: [0, 0] };
+
     // Create service object - handle empty optional ObjectIds
     const serviceData = {
       name,
@@ -52,6 +56,7 @@ exports.createService = async (req, res) => {
       isApproved: false,
       approvalStatus: 'pending',
       createdByVendor: req.user._id,
+      location: serviceLocation,
     };
 
     // Only add brand if it's a non-empty string

@@ -24,10 +24,26 @@ exports.getAllServices = async (req, res) => {
       sortOrder = 'desc',
       minPrice,
       maxPrice,
+      latitude,
+      longitude,
+      radius = 10, // Default 10km radius
     } = req.query;
 
     // Build filter object
     const filter = { isActive: true, approvalStatus: 'approved' };
+
+    // Filter by location if provided
+    if (latitude && longitude) {
+      filter.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          $maxDistance: parseInt(radius) * 1000, // Distance in meters
+        },
+      };
+    }
 
     // Filter by category
     if (category) {
@@ -127,7 +143,9 @@ exports.getCategories = async (req, res) => {
  */
 exports.getServicesByCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const {
+      categoryId
+    } = req.params;
     const {
       page = 1,
       limit = 10,
@@ -136,6 +154,9 @@ exports.getServicesByCategory = async (req, res) => {
       minPrice,
       maxPrice,
       search,
+      latitude,
+      longitude,
+      radius = 10,
     } = req.query;
 
     // Validate category exists
@@ -153,6 +174,19 @@ exports.getServicesByCategory = async (req, res) => {
       isActive: true,
       approvalStatus: 'approved',
     };
+
+    // Filter by location if provided
+    if (latitude && longitude) {
+      filter.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          $maxDistance: parseInt(radius) * 1000, // Distance in meters
+        },
+      };
+    }
 
     // Filter by price range
     if (minPrice || maxPrice) {
@@ -180,14 +214,18 @@ exports.getServicesByCategory = async (req, res) => {
 
     // Sort
     const sortObj = {};
-    sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    if (req.query.sortBy) {
+      sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    } else if (!latitude || !longitude) {
+      sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    }
 
     // Fetch services
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .populate('vendor', 'firstName lastName businessName profileImage rating')
-      .sort(sortObj)
+      .sort(Object.keys(sortObj).length > 0 ? sortObj : undefined)
       .skip(skip)
       .limit(limitNum)
       .lean();
@@ -271,7 +309,14 @@ exports.getServiceDetails = async (req, res) => {
  */
 exports.searchServices = async (req, res) => {
   try {
-    const { query = '', page = 1, limit = 10 } = req.query;
+    const {
+      query = '',
+      page = 1,
+      limit = 10,
+      latitude,
+      longitude,
+      radius = 10,
+    } = req.query;
 
     if (!query || query.trim().length < 2) {
       return res.status(400).json({
@@ -295,11 +340,24 @@ exports.searchServices = async (req, res) => {
       ],
     };
 
+    // Filter by location if provided
+    if (latitude && longitude) {
+      filter.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          $maxDistance: parseInt(radius) * 1000, // Distance in meters
+        },
+      };
+    }
+
     const services = await Service.find(filter)
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .populate('vendor', 'firstName lastName businessName profileImage rating')
-      .sort({ 'ratings.average': -1 })
+      .sort((latitude && longitude && !req.query.sortBy) ? undefined : { 'ratings.average': -1 })
       .skip(skip)
       .limit(limitNum)
       .lean();
