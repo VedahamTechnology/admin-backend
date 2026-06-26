@@ -1,6 +1,7 @@
 const User = require('../../models/User');
 const Category = require('../../models/Category');
 const Service = require('../../models/Service');
+const { cloudinary } = require('../../config/cloudinary');
 
 /**
  * Get vendor profile
@@ -74,6 +75,24 @@ exports.updateProfile = async (req, res) => {
     if (experience) vendor.vendor.experience = experience;
     if (skills) vendor.vendor.skills = skills;
 
+    // Handle profile image if uploaded via this route (optional)
+    if (req.file) {
+      // Delete old image if exists
+      if (vendor.profileImage) {
+        try {
+          const parts = vendor.profileImage.split('/');
+          const filename = parts.pop();
+          const publicIdWithoutExtension = filename.split('.')[0];
+          const folderPath = parts.slice(parts.indexOf('homster')).join('/');
+          const fullPublicId = `${folderPath}/${publicIdWithoutExtension}`;
+          await cloudinary.uploader.destroy(fullPublicId);
+        } catch (err) {
+          console.warn('Failed to delete old vendor profile image:', err.message);
+        }
+      }
+      vendor.profileImage = req.file.path;
+    }
+
     await vendor.save();
 
     // Populate categories before sending response
@@ -92,7 +111,85 @@ exports.updateProfile = async (req, res) => {
         ownerName: vendor.vendor.ownerName,
         experience: vendor.vendor.experience,
         location: vendor.location,
+        profileImage: vendor.profileImage,
       },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Update vendor profile image separately
+ */
+exports.updateProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image',
+      });
+    }
+
+    const vendor = await User.findById(req.user._id);
+
+    if (vendor.profileImage) {
+      try {
+        const parts = vendor.profileImage.split('/');
+        const filename = parts.pop();
+        const publicIdWithoutExtension = filename.split('.')[0];
+        const folderPath = parts.slice(parts.indexOf('homster')).join('/');
+        const fullPublicId = `${folderPath}/${publicIdWithoutExtension}`;
+        await cloudinary.uploader.destroy(fullPublicId);
+      } catch (err) {
+        console.warn('Failed to delete old vendor profile image:', err.message);
+      }
+    }
+
+    vendor.profileImage = req.file.path;
+    await vendor.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile image updated successfully',
+      profileImage: vendor.profileImage,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Delete vendor profile image
+ */
+exports.deleteProfileImage = async (req, res) => {
+  try {
+    const vendor = await User.findById(req.user._id);
+
+    if (!vendor.profileImage) {
+      return res.status(400).json({
+        success: false,
+        message: 'No profile image to delete',
+      });
+    }
+
+    try {
+      const parts = vendor.profileImage.split('/');
+      const filename = parts.pop();
+      const publicIdWithoutExtension = filename.split('.')[0];
+      const folderPath = parts.slice(parts.indexOf('homster')).join('/');
+      const fullPublicId = `${folderPath}/${publicIdWithoutExtension}`;
+      await cloudinary.uploader.destroy(fullPublicId);
+    } catch (err) {
+      console.warn('Failed to delete vendor profile image:', err.message);
+    }
+
+    vendor.profileImage = undefined;
+    await vendor.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile image deleted successfully',
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

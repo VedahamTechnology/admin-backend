@@ -4,6 +4,8 @@ const router = express.Router();
 const {
   getProfile,
   updateProfile,
+  updateProfileImage,
+  deleteProfileImage,
   addServiceCategories,
   updateAvailability,
   updateCurrentLocation,
@@ -17,6 +19,7 @@ const {
 } = require('../../controllers/vendor/profileController');
 
 const { protect, authorize, verifyVendorApproval } = require('../../middleware/auth');
+const { upload } = require('../../config/cloudinary');
 
 // All routes require vendor authentication
 router.use(protect);
@@ -25,6 +28,8 @@ router.use(authorize('vendor'));
 // Profile routes (accessible to all vendors - pending, approved, rejected)
 router.get('/', getProfile);
 router.put('/', updateProfile);
+router.put('/image', upload.single('profileImage'), updateProfileImage);
+router.delete('/image', deleteProfileImage);
 
 // Location and availability routes (can be updated even if pending)
 router.put('/location', updateCurrentLocation);
