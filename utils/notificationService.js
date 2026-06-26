@@ -622,6 +622,54 @@ class NotificationService {
       throw error;
     }
   }
+
+  static async notifyBookingRescheduled(bookingId, rescheduledBy, io = null) {
+    try {
+      const Booking = require('../models/Booking');
+      const User = require('../models/User');
+
+      const booking = await Booking.findById(bookingId)
+        .populate('vendor', '_id firstName lastName businessName')
+        .populate('customer', '_id firstName lastName')
+        .populate('service', 'name')
+        .lean();
+
+      if (!booking) return;
+
+      const isCustomer = rescheduledBy === 'customer';
+      const recipientId = isCustomer ? booking.vendor._id : booking.customer._id;
+      const recipientRole = isCustomer ? 'vendor' : 'customer';
+      const actorName = isCustomer
+        ? `${booking.customer.firstName} ${booking.customer.lastName}`
+        : (booking.vendor.businessName || booking.vendor.firstName);
+
+      const notification = await Notification.create({
+        recipient: recipientId,
+        recipientRole: recipientRole,
+        type: 'booking_rescheduled',
+        title: '📅 Booking Rescheduled',
+        message: `Booking for ${booking.service.name} has been rescheduled by ${actorName}`,
+        description: `New Date: ${new Date(booking.bookingDate).toLocaleDateString()} | Slot: ${booking.timeSlot.startTime} - ${booking.timeSlot.endTime}`,
+        relatedData: {
+          bookingId: booking._id,
+        },
+        metadata: {
+          action: `/${recipientRole}/bookings/${bookingId}`,
+          actionLabel: 'View Booking',
+          priority: 'high',
+        },
+      });
+
+      if (io) {
+        await this.sendRealTimeNotification(io, recipientId.toString(), notification);
+      }
+
+      return notification;
+    } catch (error) {
+      console.error('Error in notifyBookingRescheduled:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = NotificationService;

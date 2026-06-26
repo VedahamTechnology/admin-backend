@@ -294,6 +294,19 @@ bookingSchema.methods.verifyEndOtp = async function(providedOtp) {
 };
 
 /**
+ * INSTANCE METHOD: Add to reschedule history
+ */
+bookingSchema.methods.addRescheduleHistory = function(previousDate, previousSlot, rescheduledBy, reason) {
+  this.rescheduleHistory.push({
+    previousDate,
+    previousSlot,
+    rescheduledBy,
+    reason,
+    rescheduledAt: new Date(),
+  });
+};
+
+/**
  * INDEXES
  */
 bookingSchema.index({ customer: 1, createdAt: -1 });

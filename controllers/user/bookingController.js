@@ -560,9 +560,18 @@ exports.rescheduleBooking = async (req, res) => {
     await booking.save();
 
     await booking.populate([
-      { path: 'vendor', select: 'firstName lastName email' },
+      { path: 'vendor', select: 'firstName lastName email businessName' },
       { path: 'service', select: 'name' },
+      { path: 'customer', select: 'firstName lastName' }
     ]);
+
+    // Send notification
+    try {
+      const io = req.app.get('io');
+      await NotificationService.notifyBookingRescheduled(booking._id, 'customer', io);
+    } catch (notificationError) {
+      console.warn('Reschedule notification failed:', notificationError.message);
+    }
 
     return res.status(200).json({
       success: true,
