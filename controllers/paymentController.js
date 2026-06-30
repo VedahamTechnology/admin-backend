@@ -73,7 +73,13 @@ exports.verifyPayment = async (req, res) => {
       bookingId
     } = req.body;
 
-    // Verify signature
+    // 1. Find the booking first to update status even on failure
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // 2. Verify signature
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -81,27 +87,35 @@ exports.verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (razorpay_signature !== expectedSign) {
+      booking.payment.status = 'failed';
+      await booking.save();
       return res.status(400).json({ success: false, message: 'Invalid payment signature' });
     }
 
-    // Update Booking
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
-    }
+    // 3. Fetch actual payment details from Razorpay
+    const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
 
+    // Map Razorpay methods to our Enum
+    const methodMapping = {
+      'card': paymentDetails.card && paymentDetails.card.type === 'debit' ? 'debit_card' : 'credit_card',
+      'netbanking': 'netbanking',
+      'wallet': 'wallet',
+      'upi': 'upi',
+      'cash': 'cash'
+    };
+
+    // 4. Update Booking with verified data
     booking.payment.status = 'completed';
     booking.payment.transactionId = razorpay_payment_id;
     booking.payment.paidAt = new Date();
-    // Use the actual payment method from Razorpay if possible, otherwise default
-    booking.payment.method = req.body.method || 'upi';
+    booking.payment.method = methodMapping[paymentDetails.method] || 'other';
 
     // Mark booking as completed
     booking.status = 'completed';
 
     await booking.save();
 
-    // Notify parties
+    // 5. Notify parties
     try {
       const NotificationService = require('../utils/notificationService');
       const io = req.app.get('io');

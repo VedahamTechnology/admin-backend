@@ -117,7 +117,7 @@ const bookingSchema = new mongoose.Schema({
   payment: {
     method: {
       type: String,
-      enum: ['credit_card', 'debit_card', 'upi', 'wallet', 'cash'],
+      enum: ['credit_card', 'debit_card', 'upi', 'wallet', 'cash', 'netbanking', 'other'],
       required: function() {
         return this.status === 'completed';  // Required only on completion
       },
