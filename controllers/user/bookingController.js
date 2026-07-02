@@ -195,10 +195,14 @@ exports.createBooking = async (req, res) => {
           intentId: intent._id
         });
       } catch (razorpayError) {
-        console.error('Online Booking Initialization Error:', razorpayError);
+        console.error('━━━━━━━━━ RAZORPAY ERROR ━━━━━━━━━');
+        console.error('Status Code:', razorpayError.statusCode);
+        console.error('Error Data:', JSON.stringify(razorpayError.error, null, 2));
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
         return res.status(500).json({
           success: false,
-          message: `Razorpay Error: ${razorpayError.description || razorpayError.message || 'Failed to initialize online payment'}`,
+          message: `Razorpay Error: ${razorpayError.description || razorpayError.error?.description || 'Failed to initialize online payment'}`,
           error: razorpayError
         });
       }
