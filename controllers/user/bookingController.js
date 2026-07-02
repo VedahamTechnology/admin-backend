@@ -183,8 +183,8 @@ exports.createBooking = async (req, res) => {
         console.error('Online Booking Initialization Error:', razorpayError);
         return res.status(500).json({
           success: false,
-          message: 'Failed to initialize online payment',
-          error: razorpayError.message
+          message: `Razorpay Error: ${razorpayError.description || razorpayError.message || 'Failed to initialize online payment'}`,
+          error: razorpayError
         });
       }
     }
