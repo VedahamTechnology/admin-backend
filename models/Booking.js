@@ -46,7 +46,6 @@ const bookingSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    index: true,
   },
 
   /**
@@ -138,7 +137,7 @@ const bookingSchema = new mongoose.Schema({
    */
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'on_the_way', 'in_progress', 'work_done', 'completed', 'cancelled'],
+    enum: ['payment_pending', 'pending', 'confirmed', 'on_the_way', 'in_progress', 'work_done', 'completed', 'cancelled'],
     default: 'pending',
     index: true,
   },
@@ -252,9 +251,9 @@ bookingSchema.pre('save', async function() {
     }
   }
 
-  // Set TTL expiry for pending bookings (1 hour from now)
-  if (this.status === 'pending' && !this.expiresAt) {
-    const expiresIn = 60 * 60 * 1000;  // 1 hour
+  // Set TTL expiry for pending or payment_pending bookings
+  if (['pending', 'payment_pending'].includes(this.status) && !this.expiresAt) {
+    const expiresIn = this.status === 'payment_pending' ? 30 * 60 * 1000 : 60 * 60 * 1000; // 30 mins for payment, 1 hour for approval
     this.expiresAt = new Date(Date.now() + expiresIn);
   }
 
@@ -314,5 +313,6 @@ bookingSchema.index({ customer: 1, status: 1, createdAt: -1 });
 bookingSchema.index({ vendor: 1, createdAt: -1 });
 bookingSchema.index({ vendor: 1, status: 1, bookingDate: 1 });
 bookingSchema.index({ 'serviceAddress.location': '2dsphere' });
+bookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
