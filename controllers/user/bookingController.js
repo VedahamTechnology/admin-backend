@@ -7,15 +7,18 @@ const NotificationService = require('../../utils/notificationService');
 const Razorpay = require('razorpay');
 
 // Initialize Razorpay
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+const KEY_ID = process.env.RAZORPAY_KEY_ID?.trim();
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET?.trim();
+
+if (!KEY_ID || !KEY_SECRET) {
   console.error('❌ RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing in .env');
 } else {
-  console.log('✅ Razorpay initialized with Key ID:', process.env.RAZORPAY_KEY_ID.substring(0, 8) + '...');
+  console.log('✅ Razorpay initialized with Key ID:', KEY_ID.substring(0, 8) + '...');
 }
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: KEY_ID,
+  key_secret: KEY_SECRET,
 });
 
 /**
@@ -122,6 +125,12 @@ exports.createBooking = async (req, res) => {
     const discount = 0;  // Can be applied via promo codes
     const totalAmount = basePrice + platformFee + tax - discount;
     const vendorPayout = basePrice - platformFee;
+
+    console.log('[Razorpay] Preparing order:', {
+      amount: Math.round(totalAmount * 100),
+      keyUsed: process.env.RAZORPAY_KEY_ID?.substring(0, 12),
+      totalAmount
+    });
 
     // Extract request body
     const { customerNotes } = req.body;
