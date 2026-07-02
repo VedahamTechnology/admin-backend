@@ -1,5 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
+// Load environment variables immediately
 dotenv.config();
 
 const cors = require("cors");
@@ -9,6 +10,8 @@ const http = require("http");
 const socketIO = require("socket.io");
 const connectDB = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
+
+// Import Routes
 const authRoutes = require("./routes/authRoutes");
 const userAdminRoutes = require("./routes/admin/userRoutes");
 const vendorAdminRoutes = require("./routes/admin/vendorRoutes");
@@ -30,7 +33,7 @@ const userAddressRoutes = require("./routes/user/addressRoutes");
 const userSliderRoutes = require("./routes/user/sliderRoutes");
 const userProfileRoutes = require("./routes/user/profileRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-dotenv.config();
+
 connectDB();
 
 const app = express();
