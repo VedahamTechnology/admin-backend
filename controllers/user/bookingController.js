@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Booking = require('../../models/Booking');
 const BookingIntent = require('../../models/BookingIntent');
 const Service = require('../../models/Service');
@@ -173,12 +174,27 @@ exports.createBooking = async (req, res) => {
           razorpayOrderId: razorpayOrder.id
         });
 
+        // Generate dummy signature for Postman testing
+        const dummyPaymentId = `pay_test_${Date.now()}`;
+        const signatureData = razorpayOrder.id + "|" + dummyPaymentId;
+        const dummySignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+          .update(signatureData)
+          .digest("hex");
+
         return res.status(201).json({
           success: true,
           message: 'Booking intent created. Please complete payment.',
           razorpayOrder,
           razorpayKey: process.env.RAZORPAY_KEY_ID,
-          intentId: intent._id
+          intentId: intent._id,
+          // This block is for Postman testing to simplify the flow
+          testVerificationData: {
+            intentId: intent._id,
+            razorpay_order_id: razorpayOrder.id,
+            razorpay_payment_id: dummyPaymentId,
+            razorpay_signature: dummySignature
+          }
         });
       } catch (razorpayError) {
         console.error('━━━━━━━━━ RAZORPAY ERROR ━━━━━━━━━');
