@@ -10,9 +10,10 @@ const {
   clearAll,
   getNotificationsByType,
   getPreferences,
+  broadcastNotification,
 } = require('../controllers/notificationController');
 
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 /**
  * All routes require authentication
@@ -33,6 +34,7 @@ router.get('/type/:type', getNotificationsByType);
 
 // Get notification preferences
 router.get('/preferences', getPreferences);
+router.post('/broadcast', authorize('admin'), broadcastNotification);
 
 /**
  * PUT ENDPOINTS

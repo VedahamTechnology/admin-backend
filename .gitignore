@@ -44,3 +44,9 @@ Thumbs.db
 # Build
 dist/
 build/
+
+homster.postman_collection.json
+homster.postman_environment.json
+current-flow.md
+api-test-cases.md
+task-breakdown.md

@@ -9,6 +9,7 @@ const {
   deleteUser,
   searchUsers,
 } = require('../../controllers/admin/userController');
+const { getUserAnalytics } = require('../../controllers/admin/analyticsController');
 
 const { protect, authorize } = require('../../middleware/auth');
 
@@ -17,6 +18,7 @@ router.use(authorize('admin'));
 
 router.get   ('/',            getAllUsers);
 router.get   ('/search',      searchUsers);
+router.get   ('/analytics',    getUserAnalytics);
 router.get   ('/:id',         getUserById);
 router.put   ('/:id/block',   blockUser);
 router.put   ('/:id/unblock', unblockUser);

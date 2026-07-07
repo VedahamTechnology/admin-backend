@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const NotificationService = require('../utils/notificationService');
+const User = require('../models/User');
 
 /**
  * Get all notifications for logged-in user
@@ -256,6 +257,74 @@ exports.getPreferences = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching preferences',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+exports.broadcastNotification = async (req, res) => {
+  try {
+    const {
+      recipientType = 'all',
+      title,
+      message,
+      description,
+      metadata = {},
+      type = 'message',
+    } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide title and message',
+      });
+    }
+
+    const filter = recipientType === 'all' ? { role: { $in: ['customer', 'vendor', 'admin', 'worker'] } } : { role: recipientType };
+    const recipients = await User.find(filter).select('_id role');
+    if (recipients.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No recipients found for this broadcast',
+      });
+    }
+
+    const notifications = await Notification.insertMany(
+      recipients.map((user) => ({
+        recipient: user._id,
+        recipientRole: user.role === 'worker' ? 'vendor' : user.role,
+        type,
+        title,
+        message,
+        description,
+        metadata: {
+          priority: metadata.priority || 'normal',
+          action: metadata.action,
+          actionLabel: metadata.actionLabel,
+          icon: metadata.icon,
+          tags: metadata.tags || [],
+        },
+      }))
+    );
+
+    const io = req.app.get('io');
+    if (io) {
+      for (const notification of notifications) {
+        await NotificationService.sendRealTimeNotification(io, notification.recipient.toString(), notification);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Broadcast sent successfully',
+      count: notifications.length,
+      data: notifications,
+    });
+  } catch (error) {
+    console.error('Broadcast notification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error broadcasting notification',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

@@ -205,6 +205,39 @@ exports.rejectWorker = async (req, res) => {
 };
 
 /**
+ * Toggle worker active state
+ */
+exports.toggleWorkerActive = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    const worker = await User.findOne({ _id: req.params.id, role: 'worker' });
+
+    if (!worker) {
+      return res.status(404).json({ success: false, message: 'Worker not found' });
+    }
+
+    worker.isActive = typeof isActive === 'boolean' ? isActive : !worker.isActive;
+    if (worker.isActive && worker.worker.verificationStatus === 'rejected') {
+      worker.worker.verificationStatus = 'pending';
+    }
+    await worker.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Worker status updated successfully',
+      worker: {
+        id: worker._id,
+        isActive: worker.isActive,
+        verificationStatus: worker.worker.verificationStatus,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
  * Get all workers with optional filters
  */
 exports.getAllWorkers = async (req, res) => {
@@ -267,6 +300,28 @@ exports.getWorkerBookings = async (req, res) => {
       page: Number(page),
       pages: Math.ceil(total / limit),
       bookings
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Delete a worker
+ */
+exports.deleteWorker = async (req, res) => {
+  try {
+    const worker = await User.findOne({ _id: req.params.id, role: 'worker' });
+
+    if (!worker) {
+      return res.status(404).json({ success: false, message: 'Worker not found' });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Worker deleted successfully',
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

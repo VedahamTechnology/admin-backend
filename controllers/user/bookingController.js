@@ -2,6 +2,7 @@ const Booking = require('../../models/Booking');
 const Service = require('../../models/Service');
 const User = require('../../models/User');
 const Category = require('../../models/Category');
+const Review = require('../../models/Review');
 const NotificationService = require('../../utils/notificationService');
 
 /**
@@ -644,4 +645,70 @@ exports.getVendorAvailability = async (req, res) => {
 /**
  * Get reschedule history for a booking
  */
+
+exports.createBookingReview = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { rating, comment } = req.body;
+
+    if (!rating) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a rating',
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.customer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to review this booking',
+      });
+    }
+
+    if (booking.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'You can only review a completed booking',
+      });
+    }
+
+    const existingReview = await Review.findOne({ booking: bookingId });
+    if (existingReview) {
+      return res.status(400).json({
+        success: false,
+        message: 'Review already submitted for this booking',
+      });
+    }
+
+    const review = await Review.create({
+      booking: bookingId,
+      user: req.user._id,
+      vendor: booking.vendor,
+      worker: booking.worker,
+      rating: Number(rating),
+      comment,
+    });
+
+    booking.review = review._id;
+    await booking.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Review submitted successfully',
+      data: review,
+    });
+  } catch (error) {
+    console.error('Create review error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error submitting review',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
 

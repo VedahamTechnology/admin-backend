@@ -1,6 +1,9 @@
 const User = require('../models/User');
+const Category = require('../models/Category');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const OtpCode = require('../models/OtpCode');
 
 const generateAccessToken = (id, role) => {
   return jwt.sign(
@@ -32,6 +35,18 @@ const setRefreshTokenCookie = (res, refreshToken) => {
   });
 };
 
+const issueTokens = async (res, user) => {
+  const accessToken = generateAccessToken(user._id, user.role);
+  const refreshToken = generateRefreshToken(user._id);
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  user.refreshToken = hashedRefreshToken;
+  await user.save();
+
+  setRefreshTokenCookie(res, refreshToken);
+  return accessToken;
+};
+
 exports.registerCustomer = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password, gender } = req.body;
@@ -61,16 +76,7 @@ exports.registerCustomer = async (req, res) => {
       role: 'customer',
     });
 
-    const accessToken = generateAccessToken(customer._id, customer.role);
-    const refreshToken = generateRefreshToken(customer._id);
-
-    // Hash and store refresh token
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    customer.refreshToken = hashedRefreshToken;
-    await customer.save();
-
-    // Set HttpOnly cookie
-    setRefreshTokenCookie(res, refreshToken);
+    const accessToken = await issueTokens(res, customer);
 
     res.status(201).json({
       success: true,
@@ -162,16 +168,7 @@ exports.registerVendor = async (req, res) => {
       },
     });
 
-    const accessToken = generateAccessToken(vendor._id, vendor.role);
-    const refreshToken = generateRefreshToken(vendor._id);
-
-    // Hash and store refresh token
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    vendor.refreshToken = hashedRefreshToken;
-    await vendor.save();
-
-    // Set HttpOnly cookie
-    setRefreshTokenCookie(res, refreshToken);
+    const accessToken = await issueTokens(res, vendor);
 
     res.status(201).json({
       success: true,
@@ -241,16 +238,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const accessToken = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id);
-
-    // Hash and store refresh token
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    user.refreshToken = hashedRefreshToken;
-    await user.save();
-
-    // Set HttpOnly cookie
-    setRefreshTokenCookie(res, refreshToken);
+    const accessToken = await issueTokens(res, user);
 
     res.status(200).json({
       success: true,
@@ -363,5 +351,245 @@ exports.logout = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.registerWorker = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      gender,
+      vendorId,
+      serviceCategory,
+      aadharNumber,
+      panNumber,
+    } = req.body;
+
+    if (!firstName || !lastName || !email || !phone || !password || !vendorId || !serviceCategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields including vendorId and serviceCategory',
+      });
+    }
+
+    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: existingUser.email === email ? 'Email already registered' : 'Phone already registered',
+      });
+    }
+
+    const vendor = await User.findOne({ _id: vendorId, role: 'vendor' });
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found',
+      });
+    }
+
+    const category = await Category.findById(serviceCategory);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service category not found',
+      });
+    }
+
+    const aadharFrontUrl = req.files && req.files['aadharFront'] ? req.files['aadharFront'][0].path : null;
+
+    const worker = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      gender,
+      role: 'worker',
+      isActive: false,
+      vendorId,
+      worker: {
+        aadharNumber,
+        panNumber,
+        serviceCategory,
+        verificationStatus: 'pending',
+        documents: {
+          aadharFront: { url: aadharFrontUrl },
+        },
+      },
+    });
+
+    const accessToken = await issueTokens(res, worker);
+
+    res.status(201).json({
+      success: true,
+      message: 'Worker registered successfully. Waiting for admin approval.',
+      accessToken,
+      user: {
+        id: worker._id,
+        firstName: worker.firstName,
+        lastName: worker.lastName,
+        email: worker.email,
+        phone: worker.phone,
+        role: worker.role,
+        verificationStatus: worker.worker.verificationStatus,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.adminLogin = async (req, res) => {
+  req.body.role = 'admin';
+  return exports.login(req, res);
+};
+
+exports.requestOtp = async (req, res) => {
+  try {
+    const { phone, role } = req.body;
+
+    if (!phone || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide phone and role',
+      });
+    }
+
+    const user = await User.findOne({ phone, role });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found for the provided phone and role',
+      });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = crypto.createHash('sha256').update(`${phone}:${role}:${otp}`).digest('hex');
+
+    await OtpCode.findOneAndUpdate(
+      { phone, role },
+      {
+        phone,
+        role,
+        otpHash,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        attempts: 0,
+        verifiedAt: null,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const response = {
+      success: true,
+      message: 'OTP sent successfully',
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      response.otp = otp;
+    }
+
+    return res.status(200).json(response);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { phone, role, otp } = req.body;
+
+    if (!phone || !role || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide phone, role and otp',
+      });
+    }
+
+    const otpRecord = await OtpCode.findOne({ phone, role }).sort({ createdAt: -1 });
+    if (!otpRecord) {
+      return res.status(404).json({
+        success: false,
+        message: 'OTP not found. Please request a new one.',
+      });
+    }
+
+    if (otpRecord.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.',
+      });
+    }
+
+    const expectedHash = crypto.createHash('sha256').update(`${phone}:${role}:${otp}`).digest('hex');
+    if (expectedHash !== otpRecord.otpHash) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP',
+      });
+    }
+
+    const user = await User.findOne({ phone, role });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found for OTP login',
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is deactivated. Contact support.',
+      });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is banned. Contact support.',
+      });
+    }
+
+    if (user.role === 'vendor' && user.vendor.verificationStatus !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: `Your account is ${user.vendor.verificationStatus}. Wait for admin approval.`,
+      });
+    }
+
+    if (user.role === 'worker' && user.worker.verificationStatus !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: `Your account is ${user.worker.verificationStatus}. Wait for admin approval.`,
+      });
+    }
+
+    otpRecord.verifiedAt = new Date();
+    await otpRecord.save();
+
+    const accessToken = await issueTokens(res, user);
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully',
+      accessToken,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

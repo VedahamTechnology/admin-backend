@@ -189,6 +189,7 @@ exports.createService = async (req, res) => {
       description,
       category,
       brand,
+      city_id,
       basePrice,
       discountedPrice,
       estimatedDuration,
@@ -201,10 +202,10 @@ exports.createService = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!name || !category || !basePrice || !estimatedDuration) {
+    if (!name || !category || !basePrice || !estimatedDuration || !city_id) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: name, category, basePrice, estimatedDuration',
+        message: 'Please provide all required fields: name, category, city_id, basePrice, estimatedDuration',
       });
     }
 
@@ -229,7 +230,10 @@ exports.createService = async (req, res) => {
     }
 
     // Check if service already exists
-    const existingService = await Service.findOne({ name: { $regex: `^${name}$`, $options: 'i' } });
+    const existingService = await Service.findOne({
+      name: { $regex: `^${name}$`, $options: 'i' },
+      city: city_id,
+    });
     if (existingService) {
       return res.status(400).json({
         success: false,
@@ -251,6 +255,7 @@ exports.createService = async (req, res) => {
       includes: includes || [],
       excludes: excludes || [],
       displayOrder: displayOrder || 0,
+      city: city_id,
       vendor: req.user._id, // Assign to admin or require a vendorId in body
     });
 
@@ -274,7 +279,7 @@ exports.createService = async (req, res) => {
  */
 exports.getAllServices = async (req, res) => {
   try {
-    const { category, isActive = 'true', page = 1, limit = 10, search, approvalStatus } = req.query;
+    const { category, city_id, isActive = 'true', page = 1, limit = 10, search, approvalStatus } = req.query;
 
     let filter = {};
     if (isActive !== 'all') {
@@ -285,6 +290,9 @@ exports.getAllServices = async (req, res) => {
     }
     if (approvalStatus && approvalStatus !== 'all') {
       filter.approvalStatus = approvalStatus;
+    }
+    if (city_id) {
+      filter.city = city_id;
     }
     if (search) {
       filter.$or = [
@@ -348,6 +356,7 @@ exports.updateService = async (req, res) => {
       description,
       category,
       brand,
+      city_id,
       basePrice,
       discountedPrice,
       estimatedDuration,
@@ -393,6 +402,7 @@ exports.updateService = async (req, res) => {
     if (description !== undefined) service.description = description;
     if (category) service.category = category;
     if (brand !== undefined) service.brand = brand || null;
+    if (city_id !== undefined) service.city = city_id;
     if (basePrice) service.basePrice = basePrice;
     if (discountedPrice !== undefined) service.discountedPrice = discountedPrice;
     if (estimatedDuration) service.estimatedDuration = estimatedDuration;

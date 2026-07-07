@@ -1,6 +1,8 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
+const Payment = require('../models/Payment');
+const Transaction = require('../models/Transaction');
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -49,6 +51,24 @@ exports.createOrder = async (req, res) => {
     // Update booking with Razorpay Order ID
     booking.payment.razorpayOrderId = order.id;
     await booking.save();
+
+    await Payment.findOneAndUpdate(
+      { booking: booking._id },
+      {
+        booking: booking._id,
+        customer: booking.customer,
+        vendor: booking.vendor,
+        amount: booking.pricing.totalAmount,
+        platformFee: booking.pricing.platformFee || 0,
+        tax: booking.pricing.tax || 0,
+        vendorEarning: booking.pricing.vendorPayout || 0,
+        method: booking.payment.method || 'cash',
+        gateway: 'razorpay',
+        gatewayOrderId: order.id,
+        status: 'initiated',
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.status(200).json({
       success: true,
@@ -114,6 +134,41 @@ exports.verifyPayment = async (req, res) => {
     booking.status = 'completed';
 
     await booking.save();
+
+    const payment = await Payment.findOneAndUpdate(
+      { booking: booking._id },
+      {
+        booking: booking._id,
+        customer: booking.customer,
+        vendor: booking.vendor,
+        amount: booking.pricing.totalAmount,
+        platformFee: booking.pricing.platformFee || 0,
+        tax: booking.pricing.tax || 0,
+        vendorEarning: booking.pricing.vendorPayout || 0,
+        method: booking.payment.method,
+        gateway: 'razorpay',
+        gatewayOrderId: razorpay_order_id,
+        gatewayPaymentId: razorpay_payment_id,
+        gatewaySignature: razorpay_signature,
+        status: 'success',
+        paidAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    await Transaction.create({
+      booking: booking._id,
+      entityType: 'vendor',
+      entity: booking.vendor,
+      type: 'earnings_credit',
+      amount: -Math.abs(booking.pricing.platformFee || 0),
+      status: 'completed',
+      refId: payment._id.toString(),
+      metadata: {
+        paymentMethod: booking.payment.method,
+        gateway: 'razorpay',
+      },
+    });
 
     // 5. Notify parties
     try {

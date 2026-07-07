@@ -32,6 +32,13 @@ const bookingSchema = new mongoose.Schema({
     ref:  'Category',
   },
 
+  // City scoping
+  city: {
+    type: String,
+    trim: true,
+    index: true,
+  },
+
   /**
    * BOOKING TIMELINE
    */

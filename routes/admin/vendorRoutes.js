@@ -12,6 +12,7 @@ const {
   searchVendors,
   getVendorsByDistance,
 } = require('../../controllers/admin/vendorController');
+const { getVendorAnalytics } = require('../../controllers/admin/analyticsController');
 
 const { protect, authorize } = require('../../middleware/auth');
 
@@ -21,6 +22,7 @@ router.use(authorize('admin'));
 router.get   ('/',            getAllVendors);
 router.get   ('/search',      searchVendors);
 router.get   ('/nearby',      getVendorsByDistance);
+router.get   ('/analytics',   getVendorAnalytics);
 router.get   ('/:id',         getVendorById);
 router.put   ('/:id/approve', approveVendor);
 router.put   ('/:id/reject',  rejectVendor);

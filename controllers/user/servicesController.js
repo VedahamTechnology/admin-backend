@@ -16,6 +16,7 @@ const Category = require('../../models/Category');
 exports.getAllServices = async (req, res) => {
   try {
     const {
+      city_id,
       category,
       search,
       page = 1,
@@ -31,6 +32,14 @@ exports.getAllServices = async (req, res) => {
 
     // Build filter object
     const filter = { isActive: true, approvalStatus: 'approved' };
+
+    if (!city_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'city_id is required',
+      });
+    }
+    filter.city = city_id;
 
     // Filter by location if provided
     if (latitude && longitude) {
@@ -147,6 +156,7 @@ exports.getServicesByCategory = async (req, res) => {
       categoryId
     } = req.params;
     const {
+      city_id,
       page = 1,
       limit = 10,
       sortBy = 'displayOrder',
@@ -168,11 +178,19 @@ exports.getServicesByCategory = async (req, res) => {
       });
     }
 
+    if (!city_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'city_id is required',
+      });
+    }
+
     // Build filter
     const filter = {
       category: categoryId,
       isActive: true,
       approvalStatus: 'approved',
+      city: city_id,
     };
 
     // Filter by location if provided
@@ -264,6 +282,14 @@ exports.getServicesByCategory = async (req, res) => {
 exports.getServiceDetails = async (req, res) => {
   try {
     const { serviceId } = req.params;
+    const { city_id } = req.query;
+
+    if (!city_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'city_id is required',
+      });
+    }
 
     const service = await Service.findById(serviceId)
       .populate('category', 'name slug')
@@ -282,6 +308,13 @@ exports.getServiceDetails = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Service is not available',
+      });
+    }
+
+    if (service.city && service.city !== city_id) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service is not available in this city',
       });
     }
 
@@ -311,6 +344,7 @@ exports.searchServices = async (req, res) => {
   try {
     const {
       query = '',
+      city_id,
       page = 1,
       limit = 10,
       latitude,
@@ -325,6 +359,13 @@ exports.searchServices = async (req, res) => {
       });
     }
 
+    if (!city_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'city_id is required',
+      });
+    }
+
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     const skip = (pageNum - 1) * limitNum;
@@ -332,6 +373,7 @@ exports.searchServices = async (req, res) => {
     const filter = {
       isActive: true,
       approvalStatus: 'approved',
+      city: city_id,
       $or: [
         { name: { $regex: query, $options: 'i' } },
         { description: { $regex: query, $options: 'i' } },
@@ -390,10 +432,17 @@ exports.searchServices = async (req, res) => {
  */
 exports.getTopRatedServices = async (req, res) => {
   try {
-    const { limit = 5 } = req.query;
+    const { limit = 5, city_id } = req.query;
     const limitNum = parseInt(limit, 10);
 
-    const services = await Service.find({ isActive: true, approvalStatus: 'approved' })
+    if (!city_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'city_id is required',
+      });
+    }
+
+    const services = await Service.find({ isActive: true, approvalStatus: 'approved', city: city_id })
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .populate('vendor', 'firstName lastName businessName profileImage rating')

@@ -41,6 +41,13 @@ const serviceSchema = new mongoose.Schema({
     required: true,
   },
 
+  // City scoping
+  city: {
+    type: String,
+    trim: true,
+    index: true,
+  },
+
   // Ratings
   ratings: {
     average: { type: Number, default: 0, min: 0, max: 5 },

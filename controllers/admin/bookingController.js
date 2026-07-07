@@ -12,6 +12,7 @@ exports.getAllBookings = async (req, res) => {
       status,
       vendorId,
       customerId,
+      city_id,
       page = 1,
       limit = 20,
       sortBy = 'createdAt',
@@ -35,6 +36,10 @@ exports.getAllBookings = async (req, res) => {
     // Filter by customer
     if (customerId) {
       filter.customer = customerId;
+    }
+
+    if (city_id) {
+      filter.city = city_id;
     }
 
     // Filter by date range
@@ -126,10 +131,15 @@ exports.getBookingById = async (req, res) => {
  */
 exports.getPendingBookings = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, city_id } = req.query;
     const skip = (page - 1) * limit;
 
-    const bookings = await Booking.find({ status: 'pending' })
+    const filter = { status: 'pending' };
+    if (city_id) {
+      filter.city = city_id;
+    }
+
+    const bookings = await Booking.find(filter)
       .populate('customer', 'firstName lastName email phone')
       .populate('vendor', 'firstName lastName businessName email')
       .populate('service', 'name basePrice')
@@ -137,7 +147,7 @@ exports.getPendingBookings = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
-    const total = await Booking.countDocuments({ status: 'pending' });
+    const total = await Booking.countDocuments(filter);
 
     res.status(200).json({
       success: true,
@@ -160,10 +170,15 @@ exports.getPendingBookings = async (req, res) => {
  */
 exports.getConfirmedBookings = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, city_id } = req.query;
     const skip = (page - 1) * limit;
 
-    const bookings = await Booking.find({ status: 'confirmed' })
+    const filter = { status: 'confirmed' };
+    if (city_id) {
+      filter.city = city_id;
+    }
+
+    const bookings = await Booking.find(filter)
       .populate('customer', 'firstName lastName email phone')
       .populate('vendor', 'firstName lastName businessName email')
       .populate('service', 'name')
@@ -171,7 +186,7 @@ exports.getConfirmedBookings = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
-    const total = await Booking.countDocuments({ status: 'confirmed' });
+    const total = await Booking.countDocuments(filter);
 
     res.status(200).json({
       success: true,
@@ -194,7 +209,7 @@ exports.getConfirmedBookings = async (req, res) => {
  */
 exports.getCompletedBookings = async (req, res) => {
   try {
-    const { page = 1, limit = 20, customerId, vendorId } = req.query;
+    const { page = 1, limit = 20, customerId, vendorId, city_id } = req.query;
     const skip = (page - 1) * limit;
 
     let filter = { status: 'completed' };
@@ -205,6 +220,10 @@ exports.getCompletedBookings = async (req, res) => {
 
     if (vendorId) {
       filter.vendor = vendorId;
+    }
+
+    if (city_id) {
+      filter.city = city_id;
     }
 
     const bookings = await Booking.find(filter)
@@ -252,10 +271,15 @@ exports.getCompletedBookings = async (req, res) => {
  */
 exports.getCancelledBookings = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, city_id } = req.query;
     const skip = (page - 1) * limit;
 
-    const bookings = await Booking.find({ status: 'cancelled' })
+    const filter = { status: 'cancelled' };
+    if (city_id) {
+      filter.city = city_id;
+    }
+
+    const bookings = await Booking.find(filter)
       .populate('customer', 'firstName lastName email')
       .populate('vendor', 'firstName lastName businessName email')
       .populate('service', 'name')
@@ -263,7 +287,7 @@ exports.getCancelledBookings = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
-    const total = await Booking.countDocuments({ status: 'cancelled' });
+    const total = await Booking.countDocuments(filter);
 
     res.status(200).json({
       success: true,
@@ -286,7 +310,7 @@ exports.getCancelledBookings = async (req, res) => {
  */
 exports.getBookingStats = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, city_id } = req.query;
 
     let dateFilter = {};
     if (startDate || endDate) {
@@ -294,11 +318,15 @@ exports.getBookingStats = async (req, res) => {
       if (startDate) {
         dateFilter.createdAt.$gte = new Date(startDate);
       }
-      if (endDate) {
+    if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         dateFilter.createdAt.$lte = end;
       }
+    }
+
+    if (city_id) {
+      dateFilter.city = city_id;
     }
 
     // Status-wise statistics
@@ -621,7 +649,7 @@ exports.updateBookingStatus = async (req, res) => {
  */
 exports.searchBookings = async (req, res) => {
   try {
-    const { search, field = 'id', page = 1, limit = 20 } = req.query;
+    const { search, field = 'id', page = 1, limit = 20, city_id } = req.query;
 
     if (!search) {
       return res.status(400).json({
@@ -647,6 +675,10 @@ exports.searchBookings = async (req, res) => {
         ],
       });
       filter.vendor = vendor?._id;
+    }
+
+    if (city_id) {
+      filter.city = city_id;
     }
 
     const bookings = await Booking.find(filter)
