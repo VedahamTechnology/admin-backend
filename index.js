@@ -1,5 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
+// Load environment variables immediately
 dotenv.config();
 
 const cors = require("cors");
@@ -11,6 +12,8 @@ const { default: chalk } = require("chalk");
 const figlet = require("figlet");
 const connectDB = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
+
+// Import Routes
 const authRoutes = require("./routes/authRoutes");
 const catalogRoutes = require("./routes/catalogRoutes");
 const userAdminRoutes = require("./routes/admin/userRoutes");
@@ -46,7 +49,7 @@ const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const scrapItemRoutes = require("./routes/scrapItemRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-dotenv.config();
+
 connectDB();
 
 const app = express();

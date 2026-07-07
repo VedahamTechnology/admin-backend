@@ -1,9 +1,12 @@
+const crypto = require('crypto');
 const Booking = require('../../models/Booking');
+const BookingIntent = require('../../models/BookingIntent');
 const Service = require('../../models/Service');
 const User = require('../../models/User');
 const Category = require('../../models/Category');
 const Review = require('../../models/Review');
 const NotificationService = require('../../utils/notificationService');
+const { razorpay, KEY_ID } = require('../../config/razorpay');
 
 /**
  * Create a new booking
@@ -107,13 +110,108 @@ exports.createBooking = async (req, res) => {
     const platformFee = (basePrice * (platformFeePercentage / 100)) || 0;
     const tax = (basePrice * (service.taxPercentage || 0)) / 100;
     const discount = 0;  // Can be applied via promo codes
-    const totalAmount = basePrice + platformFee + tax - discount;
-    const vendorPayout = basePrice - platformFee;
+    const totalAmount = parseFloat((basePrice + platformFee + tax - discount).toFixed(2));
+    const vendorPayout = parseFloat((basePrice - platformFee).toFixed(2));
+    const amountInPaise = Math.round(totalAmount * 100);
+
+    console.log('[Razorpay] Preparing order:', {
+      amountInPaise,
+      keyUsed: KEY_ID?.substring(0, 12),
+      totalAmount
+    });
 
     // Extract request body
     const { customerNotes } = req.body;
 
-    // Create booking with comprehensive pricing snapshot
+    const isOnlinePayment = paymentMethod && paymentMethod !== 'cash';
+
+    if (isOnlinePayment) {
+      try {
+        const options = {
+          amount: amountInPaise, // amount in paise
+          currency: 'INR',
+          receipt: `receipt_intent_${Date.now()}`,
+          notes: {
+            customerName: req.user.firstName + ' ' + (req.user.lastName || ''),
+          }
+        };
+        const razorpayOrder = await razorpay.orders.create(options);
+
+        // Save the intent to book without creating a real booking yet
+        const intent = await BookingIntent.create({
+          customer: req.user._id,
+          vendor: vendorId,
+          service: serviceId,
+          category: service.category,
+          bookingDate: bookingDateTime,
+          timeSlot,
+          serviceAddress: {
+            label: serviceAddress.label || 'Home',
+            street: serviceAddress.street,
+            city: serviceAddress.city,
+            state: serviceAddress.state,
+            pincode: serviceAddress.pincode,
+            location: {
+              type: 'Point',
+              coordinates: [parseFloat(longitude), parseFloat(latitude)],
+            },
+            instructions: serviceAddress.instructions,
+          },
+          pricing: {
+            basePrice,
+            platformFee,
+            tax,
+            discount,
+            totalAmount,
+            vendorPayout,
+            serviceSnapshot: {
+              serviceName: service.name,
+              serviceDescription: service.description,
+              serviceImage: service.image,
+            },
+          },
+          customerNotes,
+          paymentMethod,
+          razorpayOrderId: razorpayOrder.id
+        });
+
+        // Generate dummy signature for Postman testing
+        const dummyPaymentId = `pay_test_${Date.now()}`;
+        const signatureData = razorpayOrder.id + "|" + dummyPaymentId;
+        const dummySignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+          .update(signatureData)
+          .digest("hex");
+
+        return res.status(201).json({
+          success: true,
+          message: 'Booking intent created. Please complete payment.',
+          razorpayOrder,
+          razorpayKey: process.env.RAZORPAY_KEY_ID,
+          intentId: intent._id,
+          // This block is for Postman testing to simplify the flow
+          testVerificationData: {
+            intentId: intent._id,
+            razorpay_order_id: razorpayOrder.id,
+            razorpay_payment_id: dummyPaymentId,
+            razorpay_signature: dummySignature
+          }
+        });
+      } catch (razorpayError) {
+        console.error('━━━━━━━━━ RAZORPAY ERROR ━━━━━━━━━');
+        console.error('Status Code:', razorpayError.statusCode);
+        console.error('Error Data:', JSON.stringify(razorpayError.error, null, 2));
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        return res.status(500).json({
+          success: false,
+          message: `Razorpay Error: ${razorpayError.description || razorpayError.error?.description || 'Failed to initialize online payment'}`,
+          error: razorpayError
+        });
+      }
+    }
+
+    // CREATE DIRECT BOOKING FOR CASH
     const booking = await Booking.create({
       customer: req.user._id,
       vendor: vendorId,
@@ -147,9 +245,10 @@ exports.createBooking = async (req, res) => {
         },
       },
       payment: {
-        method: paymentMethod || 'cash',
+        method: 'cash',
         status: 'pending',
       },
+      status: 'pending',
       customerNotes,
     });
 
@@ -161,14 +260,12 @@ exports.createBooking = async (req, res) => {
       { path: 'category', select: 'name' },
     ]);
 
-    // Send notifications to vendor and customer
+    // Send notifications for cash bookings
     try {
-      // Get Socket.IO instance from request if available (passed via middleware)
       const io = req.app.get('io');
       await NotificationService.notifyBookingCreated(booking._id, booking, io);
     } catch (notificationError) {
-      console.warn('Notification sending failed (non-critical):', notificationError.message);
-      // Don't fail the booking creation if notification fails
+      console.warn('Notification sending failed:', notificationError.message);
     }
 
     return res.status(201).json({
