@@ -1,0 +1,18 @@
+tags:
+  - name: User Subscriptions
+    description: Subscription management for customers
+
+paths:
+  /api/user/subscriptions/{id}/subscriptions:
+    get:
+      summary: Get subscriptions for a user
+      tags: [User Subscriptions]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success

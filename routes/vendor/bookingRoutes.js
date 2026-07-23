@@ -23,7 +23,6 @@ router.use(protect);
 router.use(authorize('vendor'));
 router.use(verifyVendorApproval);
 
-// Booking management routes
 router.get('/', getMyBookings);
 router.get('/search', searchBookings);
 router.get('/stats', getBookingStats);

@@ -38,7 +38,9 @@
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",
     "razorpay": "^2.9.6",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

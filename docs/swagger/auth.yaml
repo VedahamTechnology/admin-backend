@@ -1,0 +1,211 @@
+tags:
+  - name: Auth
+    description: Authentication management
+
+paths:
+  /api/auth/register/customer:
+    post:
+      summary: Register a new customer
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstName
+                - lastName
+                - email
+                - phone
+                - password
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                password: { type: string }
+                gender: { type: string, enum: [male, female, other] }
+      responses:
+        201:
+          description: Registered successfully
+
+  /api/auth/register/vendor:
+    post:
+      summary: Register a new vendor
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - firstName
+                - lastName
+                - email
+                - phone
+                - password
+                - businessName
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                password: { type: string }
+                gender: { type: string }
+                businessName: { type: string }
+                ownerName: { type: string }
+                experience: { type: number }
+                skills: { type: string, description: "Comma separated values" }
+                serviceAreas: { type: string, description: "Comma separated values" }
+                aadharNumber: { type: string }
+                panNumber: { type: string }
+                aadharFront: { type: string, format: binary }
+                aadharBack: { type: string, format: binary }
+                panCard: { type: string, format: binary }
+      responses:
+        201:
+          description: Registered successfully
+
+  /api/auth/register/worker:
+    post:
+      summary: Register a new worker
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - firstName
+                - lastName
+                - email
+                - phone
+                - password
+                - vendorId
+                - serviceCategory
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                password: { type: string }
+                gender: { type: string }
+                vendorId: { type: string }
+                serviceCategory: { type: string }
+                aadharNumber: { type: string }
+                panNumber: { type: string }
+                aadharFront: { type: string, format: binary }
+      responses:
+        201:
+          description: Registered successfully
+
+  /api/auth/login:
+    post:
+      summary: User login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [customer, vendor, worker, admin] }
+      responses:
+        200:
+          description: Logged in successfully
+
+  /api/auth/otp/request:
+    post:
+      summary: Request OTP
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - role
+              properties:
+                phone: { type: string }
+                role: { type: string }
+      responses:
+        200:
+          description: OTP sent
+
+  /api/auth/otp/verify:
+    post:
+      summary: Verify OTP
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - role
+                - otp
+              properties:
+                phone: { type: string }
+                role: { type: string }
+                otp: { type: string }
+      responses:
+        200:
+          description: OTP verified
+
+  /api/auth/admin/login:
+    post:
+      summary: Admin login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        200:
+          description: Logged in successfully
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Auth]
+      responses:
+        200:
+          description: Token refreshed
+
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      tags: [Auth]
+      responses:
+        200:
+          description: Logged out successfully
+
+  /api/auth/me:
+    get:
+      summary: Get current user details
+      tags: [Auth]
+      responses:
+        200:
+          description: Success

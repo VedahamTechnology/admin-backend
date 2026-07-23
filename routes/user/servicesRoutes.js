@@ -1,23 +1,19 @@
 const express = require('express');
 const router = express.Router();
-
 const {
-  getAllServices,
-  getCategories,
-  getServicesByCategory,
-  getServiceDetails,
-  searchServices,
-  getTopRatedServices,
+    getAllServices,
+    getServiceDetails,
+    getCategories,
+    getTopRatedServices,
+    getServicesByCategory,
+    searchServices
 } = require('../../controllers/user/servicesController');
 
-const { protect, authorize } = require('../../middleware/auth');
-
-// Public routes - no authentication required
-router.get('/categories', getCategories);
-router.get('/top-rated', getTopRatedServices);
-router.get('/search', searchServices);
-router.get('/category/:categoryId', getServicesByCategory);
 router.get('/', getAllServices);
+router.get('/categories', getCategories);
+router.get('/search', searchServices);
+router.get('/top-rated', getTopRatedServices);
+router.get('/category/:categoryId', getServicesByCategory);
 router.get('/:serviceId', getServiceDetails);
 
 module.exports = router;

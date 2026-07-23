@@ -1,0 +1,425 @@
+tags:
+  - name: Admin Workers
+    description: Worker management for admins
+
+paths:
+  /api/admin/workers/pending:
+    get:
+      summary: Get all pending workers
+      tags: [Admin Workers]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: List of pending workers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  workers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Worker'
+
+  /api/admin/workers/approved:
+    get:
+      summary: Get all approved workers
+      tags: [Admin Workers]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: List of approved workers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  workers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Worker'
+
+  /api/admin/workers/rejected:
+    get:
+      summary: Get all rejected workers
+      tags: [Admin Workers]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: List of rejected workers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  workers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Worker'
+
+  /api/admin/workers/analytics:
+    get:
+      summary: Get worker analytics
+      tags: [Admin Workers]
+      responses:
+        200:
+          description: Worker analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalWorkers:
+                        type: integer
+                      approvedWorkers:
+                        type: integer
+                      pendingWorkers:
+                        type: integer
+                      rejectedWorkers:
+                        type: integer
+                      activeWorkers:
+                        type: integer
+                      topWorkers:
+                        type: array
+                        items:
+                          type: object
+
+  /api/admin/workers/{id}/bookings:
+    get:
+      summary: Get bookings for a specific worker
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, confirmed, on_the_way, started, completed, cancelled]
+      responses:
+        200:
+          description: List of worker bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  bookings:
+                    type: array
+                    items:
+                      type: object
+
+  /api/admin/workers/{id}/approve:
+    patch:
+      summary: Approve a worker
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Worker approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  worker:
+                    type: object
+
+  /api/admin/workers/{id}/reject:
+    patch:
+      summary: Reject a worker
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for rejection
+      responses:
+        200:
+          description: Worker rejected successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  worker:
+                    type: object
+
+  /api/admin/workers:
+    get:
+      summary: Get all workers with filters
+      tags: [Admin Workers]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - in: query
+          name: vendorId
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: List of workers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  workers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Worker'
+
+  /api/admin/workers/{id}:
+    get:
+      summary: Get a single worker's details
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Worker details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  worker:
+                    $ref: '#/components/schemas/Worker'
+
+  /api/admin/workers/{id}/toggle-active:
+    patch:
+      summary: Toggle worker active state
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+                  description: New active state. If not provided, it will toggle the current state.
+      responses:
+        200:
+          description: Worker state updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  worker:
+                    type: object
+
+  /api/admin/workers/{id}:
+    delete:
+      summary: Delete a worker
+      tags: [Admin Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Worker deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+components:
+  schemas:
+    Worker:
+      type: object
+      properties:
+        _id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        worker:
+          type: object
+          properties:
+            verificationStatus:
+              type: string
+              enum: [pending, approved, rejected]
+            serviceCategory:
+              type: object
+              properties:
+                _id:
+                  type: string
+                name:
+                  type: string
+            rejectionReason:
+              type: string
+        vendorId:
+          type: object
+          properties:
+            _id:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            businessName:
+              type: string
+            phone:
+              type: string

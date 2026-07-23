@@ -21,22 +21,21 @@ const { protect, authorize } = require('../../middleware/auth');
 router.use(protect);
 router.use(authorize('admin'));
 
-// Service approval endpoints
 router.get('/approval/pending', getPendingServices);
 router.put('/approval/:serviceId/approve', approveService);
 router.put('/approval/:serviceId/reject', rejectService);
 
 router.post('/', createService);
-router.post('/bulk/status', bulkUpdateServiceStatus);
-
-// Top booked services - must come before generic :id routes
-router.get('/top-booked', getTopBookedServices);
-
 router.get('/', getAllServices);
+
+router.post('/bulk/status', bulkUpdateServiceStatus);
+router.get('/top-booked', getTopBookedServices);
 router.get('/category/:categoryId', getServicesByCategory);
+
 router.get('/:id', getServiceById);
 router.put('/:id', updateService);
 router.delete('/:id', deleteService);
+
 router.put('/:id/remove-vendor', removeVendorFromService);
 
 module.exports = router;

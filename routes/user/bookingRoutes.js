@@ -1,33 +1,14 @@
 const express = require('express');
 const router = express.Router();
-
-const {
-  createBooking,
-  getMyBookings,
-  getBookingDetails,
-  cancelBooking,
-  rescheduleBooking,
-  getBookingStats,
-  searchBookings,
-  getVendorAvailability,
-  createBookingReview,
-} = require('../../controllers/user/bookingController');
-
+const bookingController = require('../../controllers/user/bookingController');
 const { protect, authorize } = require('../../middleware/auth');
 
-// All routes require user authentication
 router.use(protect);
 router.use(authorize('customer'));
 
-// Booking routes
-router.post('/', createBooking);
-router.get('/', getMyBookings);
-router.get('/search', searchBookings);
-router.get('/stats', getBookingStats);
-router.get('/vendor-availability/:vendorId', getVendorAvailability);
-router.get('/:bookingId', getBookingDetails);
-router.put('/:bookingId/cancel', cancelBooking);
-router.put('/:bookingId/reschedule', rescheduleBooking);
-router.post('/:bookingId/review', createBookingReview);
+router.post('/', bookingController.createBooking);
+router.get('/', bookingController.getMyBookings);
+router.get('/:bookingId', bookingController.getBookingDetails);
+router.patch('/:bookingId/cancel', bookingController.cancelBooking);
 
 module.exports = router;

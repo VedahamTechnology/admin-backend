@@ -1,0 +1,254 @@
+tags:
+  - name: Vendor Bookings
+    description: Booking management for vendors
+
+paths:
+  /api/vendor/bookings:
+    get:
+      summary: Get vendor's bookings
+      tags: [Vendor Bookings]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, confirmed, on_the_way, in_progress, completed, cancelled]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/bookings/search:
+    get:
+      summary: Search vendor's bookings
+      tags: [Vendor Bookings]
+      parameters:
+        - in: query
+          name: search
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/bookings/stats:
+    get:
+      summary: Get vendor's booking statistics
+      tags: [Vendor Bookings]
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/bookings/{id}:
+    get:
+      summary: Get specific booking details
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/bookings/{id}/accept:
+    put:
+      summary: Accept a booking request
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Booking accepted
+
+  /api/vendor/bookings/{id}/reject:
+    put:
+      summary: Reject a booking request
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        200:
+          description: Booking rejected
+
+  /api/vendor/bookings/{id}/complete:
+    put:
+      summary: Mark a booking as completed
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Booking completed
+
+  /api/vendor/bookings/{id}/assign-worker:
+    put:
+      summary: Assign a worker to a booking
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workerId]
+              properties:
+                workerId:
+                  type: string
+      responses:
+        200:
+          description: Worker assigned
+
+  /api/vendor/bookings/{id}/verify-start-otp:
+    post:
+      summary: Verify OTP to start the service
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+      responses:
+        200:
+          description: OTP verified
+
+  /api/vendor/bookings/{id}/verify-end-otp:
+    post:
+      summary: Verify OTP to end the service
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+      responses:
+        200:
+          description: OTP verified
+
+  /api/vendor/bookings/{id}/proof-of-work:
+    post:
+      summary: Submit proof of work for a booking
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [beforeImages, afterImages]
+              properties:
+                beforeImages:
+                  type: array
+                  items:
+                    type: string
+                afterImages:
+                  type: array
+                  items:
+                    type: string
+                vendorNotes:
+                  type: string
+      responses:
+        200:
+          description: Proof submitted
+
+  /api/vendor/bookings/{id}/cancel:
+    put:
+      summary: Cancel a booking
+      tags: [Vendor Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        200:
+          description: Booking cancelled

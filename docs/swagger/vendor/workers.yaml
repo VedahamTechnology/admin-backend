@@ -1,0 +1,32 @@
+tags:
+  - name: Vendor Workers
+    description: Worker management for vendors
+
+paths:
+  /api/vendor/workers:
+    post:
+      summary: Add a new worker (request sent to admin for approval)
+      tags: [Vendor Workers]
+      responses:
+        201:
+          description: Worker request created
+    get:
+      summary: Get all workers of this vendor
+      tags: [Vendor Workers]
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/workers/{id}:
+    get:
+      summary: Get specific worker details
+      tags: [Vendor Workers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success

@@ -1,0 +1,261 @@
+tags:
+  - name: Vendor Profile
+    description: Profile management for vendors
+
+paths:
+  /api/vendor/profile:
+    get:
+      summary: Get vendor profile
+      tags: [Vendor Profile]
+      responses:
+        200:
+          description: Success
+    put:
+      summary: Update vendor profile
+      tags: [Vendor Profile]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+                gender:
+                  type: string
+                businessName:
+                  type: string
+                ownerName:
+                  type: string
+                experience:
+                  type: string
+                skills:
+                  type: string
+                address:
+                  type: string
+                city:
+                  type: string
+                pincode:
+                  type: string
+      responses:
+        200:
+          description: Profile updated
+
+  /api/vendor/profile/image:
+    put:
+      summary: Update vendor profile image
+      tags: [Vendor Profile]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profileImage:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Image updated
+    delete:
+      summary: Delete vendor profile image
+      tags: [Vendor Profile]
+      responses:
+        200:
+          description: Image deleted
+
+  /api/vendor/profile/location:
+    put:
+      summary: Update vendor location
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - longitude
+                - latitude
+              properties:
+                longitude:
+                  type: number
+                latitude:
+                  type: number
+      responses:
+        200:
+          description: Location updated
+
+  /api/vendor/profile/stats:
+    get:
+      summary: Get vendor stats
+      tags: [Vendor Profile]
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/profile/services/available:
+    get:
+      summary: Get available services for selection
+      tags: [Vendor Profile]
+      parameters:
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/profile/services/categories:
+    get:
+      summary: Get service categories
+      tags: [Vendor Profile]
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/profile/services/my-services:
+    get:
+      summary: Get services selected by the vendor
+      tags: [Vendor Profile]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+
+  /api/vendor/profile/services/select:
+    post:
+      summary: Select a service
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serviceId
+                - vendorPrice
+              properties:
+                serviceId:
+                  type: string
+                vendorPrice:
+                  type: number
+      responses:
+        200:
+          description: Service selected
+
+  /api/vendor/profile/services/pricing:
+    put:
+      summary: Update pricing for a selected service
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serviceId
+              properties:
+                serviceId:
+                  type: string
+                vendorPrice:
+                  type: number
+                isAvailable:
+                  type: boolean
+      responses:
+        200:
+          description: Pricing updated
+
+  /api/vendor/profile/services/remove:
+    post:
+      summary: Remove a selected service
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serviceId
+              properties:
+                serviceId:
+                  type: string
+      responses:
+        200:
+          description: Service removed
+
+  /api/vendor/profile/categories:
+    post:
+      summary: Add service categories
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - categoryIds
+              properties:
+                categoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        201:
+          description: Categories added
+
+  /api/vendor/profile/availability:
+    put:
+      summary: Update vendor availability
+      tags: [Vendor Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isAvailable
+              properties:
+                isAvailable:
+                  type: boolean
+      responses:
+        200:
+          description: Availability updated

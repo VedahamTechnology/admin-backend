@@ -25,30 +25,24 @@ const { upload } = require('../../config/cloudinary');
 router.use(protect);
 router.use(authorize('vendor'));
 
-// Profile routes (accessible to all vendors - pending, approved, rejected)
 router.get('/', getProfile);
 router.put('/', updateProfile);
+
 router.put('/image', upload.single('profileImage'), updateProfileImage);
 router.delete('/image', deleteProfileImage);
 
-// Location and availability routes (can be updated even if pending)
 router.put('/location', updateCurrentLocation);
 
 // Routes that require approval
 router.use(verifyVendorApproval);
 
-// Stats route (specific route must come before parameterized routes)
 router.get('/stats', getStats);
-
-// Service selection routes (after approval)
 router.get('/services/available', getAvailableServices);
 router.get('/services/categories', getCategories);
 router.get('/services/my-services', getMySelectedServices);
 router.post('/services/select', selectService);
 router.put('/services/pricing', updateMyServicePricing);
 router.post('/services/remove', removeMyService);
-
-// Category routes
 router.post('/categories', addServiceCategories);
 router.put('/availability', updateAvailability);
 

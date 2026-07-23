@@ -10,7 +10,6 @@ router.use(protect);
 router.get('/', profileController.getProfile);
 router.put('/', profileController.updateProfile);
 
-// Profile image routes
 router.put('/image', upload.single('profileImage'), profileController.updateProfileImage);
 router.delete('/image', profileController.deleteProfileImage);
 

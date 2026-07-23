@@ -1,0 +1,57 @@
+tags:
+  - name: User Profile
+    description: Profile management for customers
+
+paths:
+  /api/user/profile:
+    get:
+      summary: Get customer profile
+      tags: [User Profile]
+      responses:
+        200:
+          description: Success
+    put:
+      summary: Update customer profile
+      tags: [User Profile]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+                gender:
+                  type: string
+                  enum: [male, female, other]
+      responses:
+        200:
+          description: Profile updated
+
+  /api/user/profile/image:
+    put:
+      summary: Update customer profile image
+      tags: [User Profile]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Image updated
+    delete:
+      summary: Delete customer profile image
+      tags: [User Profile]
+      responses:
+        200:
+          description: Image deleted

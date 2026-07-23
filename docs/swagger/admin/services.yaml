@@ -1,0 +1,332 @@
+tags:
+  - name: Admin Services
+    description: Service management for admins
+
+paths:
+  /api/admin/services/approval/pending:
+    get:
+      summary: Get pending services for approval
+      tags: [Admin Services]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+
+  /api/admin/services/approval/{serviceId}/approve:
+    put:
+      summary: Approve a service
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Service approved
+
+  /api/admin/services/approval/{serviceId}/reject:
+    put:
+      summary: Reject a service
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rejectionReason:
+                  type: string
+      responses:
+        200:
+          description: Service rejected
+
+  /api/admin/services:
+    post:
+      summary: Create a new service
+      tags: [Admin Services]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, city_id, basePrice, estimatedDuration]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                brand:
+                  type: string
+                city_id:
+                  type: string
+                basePrice:
+                  type: number
+                discountedPrice:
+                  type: number
+                estimatedDuration:
+                  type: string
+                image:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                features:
+                  type: array
+                  items:
+                    type: string
+                includes:
+                  type: array
+                  items:
+                    type: string
+                excludes:
+                  type: array
+                  items:
+                    type: string
+                displayOrder:
+                  type: integer
+      responses:
+        201:
+          description: Service created
+    get:
+      summary: Get all services
+      tags: [Admin Services]
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: city_id
+          schema:
+            type: string
+        - in: query
+          name: isActive
+          schema:
+            type: string
+            default: "true"
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: approvalStatus
+          schema:
+            type: string
+            enum: [all, pending, approved, rejected]
+      responses:
+        200:
+          description: Success
+
+  /api/admin/services/bulk/status:
+    post:
+      summary: Bulk update service status
+      tags: [Admin Services]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serviceIds, isActive]
+              properties:
+                serviceIds:
+                  type: array
+                  items:
+                    type: string
+                isActive:
+                  type: boolean
+      responses:
+        200:
+          description: Status updated
+
+  /api/admin/services/top-booked:
+    get:
+      summary: Get top booked services
+      tags: [Admin Services]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 5
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [week, month, year]
+            default: month
+      responses:
+        200:
+          description: Success
+
+  /api/admin/services/category/{categoryId}:
+    get:
+      summary: Get services by category
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: isActive
+          schema:
+            type: string
+            default: "true"
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/admin/services/{id}:
+    get:
+      summary: Get service by ID
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+    put:
+      summary: Update a service
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                brand:
+                  type: string
+                city_id:
+                  type: string
+                basePrice:
+                  type: number
+                discountedPrice:
+                  type: number
+                estimatedDuration:
+                  type: string
+                image:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                features:
+                  type: array
+                  items:
+                    type: string
+                includes:
+                  type: array
+                  items:
+                    type: string
+                excludes:
+                  type: array
+                  items:
+                    type: string
+                isActive:
+                  type: boolean
+                displayOrder:
+                  type: integer
+      responses:
+        200:
+          description: Service updated
+    delete:
+      summary: Delete a service
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Service deleted
+
+  /api/admin/services/{id}/remove-vendor:
+    put:
+      summary: Remove a vendor from a service
+      tags: [Admin Services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vendorId]
+              properties:
+                vendorId:
+                  type: string
+      responses:
+        200:
+          description: Vendor removed

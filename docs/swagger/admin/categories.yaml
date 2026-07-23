@@ -1,0 +1,132 @@
+tags:
+  - name: Admin Categories
+    description: Category management for admins
+
+paths:
+  /api/admin/categories:
+    post:
+      summary: Create a new category
+      tags: [Admin Categories]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+                icon:
+                  type: string
+                displayOrder:
+                  type: integer
+      responses:
+        201:
+          description: Category created
+    get:
+      summary: Get all categories
+      tags: [Admin Categories]
+      parameters:
+        - in: query
+          name: isActive
+          schema:
+            type: string
+            enum: ['true', 'false', 'all']
+            default: "true"
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/admin/categories/{id}:
+    get:
+      summary: Get category by ID
+      tags: [Admin Categories]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+    put:
+      summary: Update a category
+      tags: [Admin Categories]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+                  format: binary
+                icon:
+                  type: string
+                isActive:
+                  type: boolean
+                displayOrder:
+                  type: integer
+      responses:
+        200:
+          description: Category updated
+    delete:
+      summary: Delete a category
+      tags: [Admin Categories]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Category deleted
+
+  /api/admin/categories/bulk/status:
+    post:
+      summary: Bulk update category status
+      tags: [Admin Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [categoryIds, isActive]
+              properties:
+                categoryIds:
+                  type: array
+                  items:
+                    type: string
+                isActive:
+                  type: boolean
+      responses:
+        200:
+          description: Status updated

@@ -1,0 +1,61 @@
+tags:
+  - name: User Payments
+    description: Payment processing with Razorpay
+
+paths:
+  /api/user/payments/webhook:
+    post:
+      summary: Razorpay webhook listener
+      tags: [User Payments]
+      responses:
+        200:
+          description: Webhook received
+
+  /api/user/payments/create-order:
+    post:
+      summary: Create a new Razorpay order
+      tags: [User Payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookingId
+              properties:
+                bookingId:
+                  type: string
+      responses:
+        200:
+          description: Order created
+
+  /api/user/payments/verify-payment:
+    post:
+      summary: Verify payment signature after checkout
+      tags: [User Payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - razorpay_order_id
+                - razorpay_payment_id
+                - razorpay_signature
+              properties:
+                razorpay_order_id:
+                  type: string
+                razorpay_payment_id:
+                  type: string
+                razorpay_signature:
+                  type: string
+                bookingId:
+                  type: string
+                intentId:
+                  type: string
+                  description: Required for payment-first flow
+      responses:
+        200:
+          description: Payment verified

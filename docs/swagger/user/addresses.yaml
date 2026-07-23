@@ -1,0 +1,111 @@
+tags:
+  - name: User Addresses
+    description: Customer address management
+
+paths:
+  /api/user/addresses:
+    post:
+      summary: Add a new address
+      tags: [User Addresses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - street
+                - city
+                - state
+                - pincode
+                - latitude
+                - longitude
+              properties:
+                label:
+                  type: string
+                  default: Home
+                street:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                pincode:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                isDefault:
+                  type: boolean
+      responses:
+        201:
+          description: Address added successfully
+    get:
+      summary: Get all addresses for the logged-in user
+      tags: [User Addresses]
+      responses:
+        200:
+          description: List of addresses
+
+  /api/user/addresses/{addressId}:
+    put:
+      summary: Update an address
+      tags: [User Addresses]
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                street:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                pincode:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                isDefault:
+                  type: boolean
+      responses:
+        200:
+          description: Address updated successfully
+    delete:
+      summary: Delete an address
+      tags: [User Addresses]
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Address deleted successfully
+
+  /api/user/addresses/{addressId}/default:
+    put:
+      summary: Set an address as default
+      tags: [User Addresses]
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Default address updated

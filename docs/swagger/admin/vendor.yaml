@@ -1,0 +1,280 @@
+tags:
+  - name: Admin Vendors
+    description: Vendor management for admins
+
+paths:
+  /api/admin/vendors:
+    get:
+      summary: Get all vendors
+      tags: [Admin Vendors]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  vendors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vendor'
+
+  /api/admin/vendors/search:
+    get:
+      summary: Search vendors
+      tags: [Admin Vendors]
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/admin/vendors/nearby:
+    get:
+      summary: Get vendors by distance
+      tags: [Admin Vendors]
+      parameters:
+        - in: query
+          name: longitude
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: latitude
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: distance
+          schema:
+            type: number
+            default: 10
+            description: Distance in km
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Success
+
+  /api/admin/vendors/analytics:
+    get:
+      summary: Get vendor analytics
+      tags: [Admin Vendors]
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalVendors:
+                        type: integer
+                      approvedVendors:
+                        type: integer
+                      pendingVendors:
+                        type: integer
+                      rejectedVendors:
+                        type: integer
+                      activeVendors:
+                        type: integer
+                      topVendors:
+                        type: array
+                        items:
+                          type: object
+
+  /api/admin/vendors/{id}:
+    get:
+      summary: Get vendor by ID
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  vendor:
+                    $ref: '#/components/schemas/Vendor'
+    delete:
+      summary: Delete a vendor
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Vendor deleted
+
+  /api/admin/vendors/{id}/approve:
+    put:
+      summary: Approve a vendor
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Vendor approved
+
+  /api/admin/vendors/{id}/reject:
+    put:
+      summary: Reject a vendor
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for rejection
+      responses:
+        200:
+          description: Vendor rejected
+
+  /api/admin/vendors/{id}/block:
+    put:
+      summary: Block a vendor
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Vendor blocked
+
+  /api/admin/vendors/{id}/unblock:
+    put:
+      summary: Unblock a vendor
+      tags: [Admin Vendors]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Vendor unblocked
+
+components:
+  schemas:
+    Vendor:
+      type: object
+      properties:
+        _id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        isBanned:
+          type: boolean
+        isActive:
+          type: boolean
+        vendor:
+          type: object
+          properties:
+            businessName:
+              type: string
+            ownerName:
+              type: string
+            verificationStatus:
+              type: string
+              enum: [pending, approved, rejected]
+            serviceCategories:
+              type: array
+              items:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  name:
+                    type: string
