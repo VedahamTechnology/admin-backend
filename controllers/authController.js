@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const OtpCode = require('../models/OtpCode');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 const generateAccessToken = (id, role) => {
   return jwt.sign(
