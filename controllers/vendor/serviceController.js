@@ -354,7 +354,7 @@ exports.searchServices = async (req, res) => {
 
     const services = await Service.find({
       vendor: req.user._id,
-      ...(city_id ? { city: city_id } : {}),
+      ...(city_id ? { city: { $regex: new RegExp(`^${city_id}$`, 'i') } } : {}),
       $or: [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
@@ -367,7 +367,7 @@ exports.searchServices = async (req, res) => {
 
     const total = await Service.countDocuments({
       vendor: req.user._id,
-      ...(city_id ? { city: city_id } : {}),
+      ...(city_id ? { city: { $regex: new RegExp(`^${city_id}$`, 'i') } } : {}),
       $or: [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
@@ -451,7 +451,7 @@ exports.getServicesByCategory = async (req, res) => {
       category: categoryId,
       isActive: true,
       approvalStatus: 'approved',
-      city: city_id,
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') },
     };
 
     // Price range filter

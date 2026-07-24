@@ -69,7 +69,7 @@ exports.getBrands = async (req, res) => {
     const serviceFilter = {
       isActive: true,
       approvalStatus: 'approved',
-      city: city_id,
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') },
     };
     if (category_id) serviceFilter.category = category_id;
 
@@ -100,7 +100,7 @@ exports.getBrandServices = async (req, res) => {
       brand: id,
       isActive: true,
       approvalStatus: 'approved',
-      city: city_id,
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') },
     };
 
     const skip = (Number(page) - 1) * Number(limit);

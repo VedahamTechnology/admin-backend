@@ -39,7 +39,7 @@ exports.getAllBookings = async (req, res) => {
     }
 
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     // Filter by date range
@@ -136,7 +136,7 @@ exports.getPendingBookings = async (req, res) => {
 
     const filter = { status: 'pending' };
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const bookings = await Booking.find(filter)
@@ -175,7 +175,7 @@ exports.getConfirmedBookings = async (req, res) => {
 
     const filter = { status: 'confirmed' };
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const bookings = await Booking.find(filter)
@@ -223,7 +223,7 @@ exports.getCompletedBookings = async (req, res) => {
     }
 
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const bookings = await Booking.find(filter)
@@ -276,7 +276,7 @@ exports.getCancelledBookings = async (req, res) => {
 
     const filter = { status: 'cancelled' };
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const bookings = await Booking.find(filter)
@@ -326,7 +326,7 @@ exports.getBookingStats = async (req, res) => {
     }
 
     if (city_id) {
-      dateFilter.city = city_id;
+      dateFilter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     // Status-wise statistics
@@ -678,7 +678,7 @@ exports.searchBookings = async (req, res) => {
     }
 
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const bookings = await Booking.find(filter)

@@ -232,7 +232,7 @@ exports.createService = async (req, res) => {
     // Check if service already exists
     const existingService = await Service.findOne({
       name: { $regex: `^${name}$`, $options: 'i' },
-      city: city_id,
+      city: { $regex: `^${city_id}$`, $options: 'i' },
     });
     if (existingService) {
       return res.status(400).json({
@@ -292,7 +292,7 @@ exports.getAllServices = async (req, res) => {
       filter.approvalStatus = approvalStatus;
     }
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
     if (search) {
       filter.$or = [

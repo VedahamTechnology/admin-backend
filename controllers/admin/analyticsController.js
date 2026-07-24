@@ -149,7 +149,7 @@ exports.getBookingAnalytics = async (req, res) => {
     const filter = {};
 
     if (city_id) {
-      filter.city = city_id;
+      filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     if (from || to) {
@@ -218,7 +218,7 @@ exports.getPaymentAnalytics = async (req, res) => {
     const { city_id, from, to } = req.query;
     const bookingFilter = {};
 
-    if (city_id) bookingFilter.city = city_id;
+    if (city_id) bookingFilter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
     if (from || to) {
       bookingFilter.createdAt = {};
       if (from) bookingFilter.createdAt.$gte = new Date(from);
@@ -309,7 +309,7 @@ exports.getSettlementAnalytics = async (req, res) => {
     const { city_id } = req.query;
     const vendorFilter = { role: 'vendor' };
     if (city_id) {
-      vendorFilter['vendor.serviceAreas.city'] = city_id;
+      vendorFilter['vendor.serviceAreas.city'] = { $regex: new RegExp(`^${city_id}$`, 'i') };
     }
 
     const vendors = await User.find(vendorFilter).select('_id firstName lastName businessName email phone isActive isBanned').lean();

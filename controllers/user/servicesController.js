@@ -39,7 +39,8 @@ exports.getAllServices = async (req, res) => {
         message: 'city_id is required',
       });
     }
-    filter.city = city_id;
+    // Case-insensitive city matching
+    filter.city = { $regex: new RegExp(`^${city_id}$`, 'i') };
 
     // Filter by location if provided
     if (latitude && longitude) {
@@ -190,7 +191,7 @@ exports.getServicesByCategory = async (req, res) => {
       category: categoryId,
       isActive: true,
       approvalStatus: 'approved',
-      city: city_id,
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') },
     };
 
     // Filter by location if provided
@@ -311,11 +312,14 @@ exports.getServiceDetails = async (req, res) => {
       });
     }
 
-    if (service.city && service.city !== city_id) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service is not available in this city',
-      });
+    if (service.city && city_id) {
+      const isCityMatch = new RegExp(`^${service.city}$`, 'i').test(city_id);
+      if (!isCityMatch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service is not available in this city',
+        });
+      }
     }
 
     return res.status(200).json({
@@ -373,7 +377,7 @@ exports.searchServices = async (req, res) => {
     const filter = {
       isActive: true,
       approvalStatus: 'approved',
-      city: city_id,
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') },
       $or: [
         { name: { $regex: query, $options: 'i' } },
         { description: { $regex: query, $options: 'i' } },
@@ -442,7 +446,11 @@ exports.getTopRatedServices = async (req, res) => {
       });
     }
 
-    const services = await Service.find({ isActive: true, approvalStatus: 'approved', city: city_id })
+    const services = await Service.find({
+      isActive: true,
+      approvalStatus: 'approved',
+      city: { $regex: new RegExp(`^${city_id}$`, 'i') }
+    })
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .populate('vendor', 'firstName lastName businessName profileImage rating')
